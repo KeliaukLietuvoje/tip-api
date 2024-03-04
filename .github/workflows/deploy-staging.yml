@@ -1,0 +1,35 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy-staging:
+    name: Deploy staging
+    environment: staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build & tag docker image
+        uses: AplinkosMinisterija/reusable-workflows/.github/actions/docker-build-tag-push@main
+        with:
+          environment: staging
+          push: true
+
+      - name: Trigger deploy
+        # TODO: remove if
+        if: false
+        uses: AplinkosMinisterija/reusable-workflows/.github/actions/trigger-workflow-and-wait@main
+        with:
+          application-id: ${{ secrets.TIP_TRIGGER_DEPLOY_APPLICATION_ID }}
+          application-private-key: ${{ secrets.TIP_TRIGGER_DEPLOY_APPLICATION_PRIVATE_KEY }}
+          repository: ${{ secrets.TIP_TRIGGER_DEPLOY_REPOSITORY }}
+          workflow-file-name: ${{ secrets.TIP_TRIGGER_DEPLOY_WORKFLOW_FILE_NAME }}
+          workflow-payload: '{"environment": "staging"}'
