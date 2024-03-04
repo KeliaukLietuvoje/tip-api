@@ -1,15 +1,15 @@
-import pick from 'lodash/pick';
-import moleculer, { Context, Errors } from 'moleculer';
-import { Action, Method, Service } from 'moleculer-decorators';
-import ApiGateway from 'moleculer-web';
+import pick from "lodash/pick";
+import moleculer, { Context, Errors } from "moleculer";
+import { Action, Method, Service } from "moleculer-decorators";
+import ApiGateway from "moleculer-web";
 import {
   COMMON_DELETED_SCOPES,
   EndpointType,
   RequestMessage,
   throwUnauthorizedError,
-} from '../types';
-import { Tenant } from './tenants.service';
-import { User } from './users.service';
+} from "../types";
+import { Tenant } from "./tenants.service";
+import { User } from "./users.service";
 export interface UserAuthMeta {
   user: User;
   profile?: Tenant;
@@ -27,27 +27,27 @@ function verifyApiKey(
   route: any,
   req: RequestMessage
 ): Promise<unknown> {
-  const apiKey = req.headers['x-api-key'];
+  const apiKey = req.headers["x-api-key"];
   return this.verifyApiKey(ctx, apiKey);
 }
 
 @Service({
-  name: 'api',
+  name: "api",
   mixins: [ApiGateway],
   // More info about settings: https://moleculer.services/docs/0.14/moleculer-web.html
   // TODO: helmet
   settings: {
     port: process.env.PORT || 3000,
-    path: '',
+    path: "",
 
     // Global CORS settings for all routes
     cors: {
       // Configures the Access-Control-Allow-Origin CORS header.
-      origin: '*',
+      origin: "*",
       // Configures the Access-Control-Allow-Methods CORS header.
-      methods: ['GET', 'OPTIONS', 'POST', 'PUT', 'DELETE'],
+      methods: ["GET", "OPTIONS", "POST", "PUT", "DELETE"],
       // Configures the Access-Control-Allow-Headers CORS header.
-      allowedHeaders: '*',
+      allowedHeaders: "*",
       // Configures the Access-Control-Max-Age CORS header.
       maxAge: 3600,
     },
@@ -57,16 +57,16 @@ function verifyApiKey(
         const removeScopes = (query: any) => {
           if (!query) return query;
 
-          if (typeof query !== 'object') {
+          if (typeof query !== "object") {
             try {
               query = JSON.parse(query);
             } catch (err) {}
           }
 
-          if (!query || typeof query !== 'object') return query;
+          if (!query || typeof query !== "object") return query;
 
-          if (query.scope === 'deleted') {
-            query.scope = COMMON_DELETED_SCOPES.join(',');
+          if (query.scope === "deleted") {
+            query.scope = COMMON_DELETED_SCOPES.join(",");
           } else {
             delete query.scope;
           }
@@ -82,45 +82,45 @@ function verifyApiKey(
     ],
     routes: [
       {
-        path: '/auth',
+        path: "/auth",
         authorization: false,
         authentication: false,
         whitelist: [
-          'auth.login',
-          'auth.evartai.sign',
-          'auth.evartai.login',
-          'auth.refreshToken',
+          "auth.login",
+          "auth.evartai.sign",
+          "auth.evartai.login",
+          "auth.refreshToken",
         ],
         aliases: {
-          'POST /login': 'auth.login',
-          'POST /evartai/sign': 'auth.evartai.sign',
-          'POST /evartai/login': 'auth.evartai.login',
-          'POST /refresh': 'auth.refreshToken',
+          "POST /login": "auth.login",
+          "POST /evartai/sign": "auth.evartai.sign",
+          "POST /evartai/login": "auth.evartai.login",
+          "POST /refresh": "auth.refreshToken",
         },
       },
       {
-        path: '/forms',
+        path: "/forms",
         authorization: false,
         authentication: false,
         whitelist: [
-          'forms.createExternalForm',
-          'forms.importExternalForms',
-          'forms.updateExternalForm',
-          'forms.deleteExternalForm',
+          "forms.createExternalForm",
+          "forms.importExternalForms",
+          "forms.updateExternalForm",
+          "forms.deleteExternalForm",
         ],
         aliases: {
-          'POST /external': 'forms.createExternalForm',
-          'POST /external/import': 'forms.importExternalForms',
-          'PATCH /external/:externalId': 'forms.updateExternalForm',
-          'DELETE /external/:externalId': 'forms.deleteExternalForm',
+          "POST /external": "forms.createExternalForm",
+          "POST /external/import": "forms.importExternalForms",
+          "PATCH /external/:externalId": "forms.updateExternalForm",
+          "DELETE /external/:externalId": "forms.deleteExternalForm",
         },
         onBeforeCall: verifyApiKey,
       },
       {
-        path: '',
+        path: "",
         whitelist: [
           // Access to any actions in all services under "/api" URL
-          '**',
+          "**",
         ],
 
         // Route-level Express middlewares. More info: https://moleculer.services/docs/0.14/moleculer-web.html#Middlewares
@@ -140,15 +140,15 @@ function verifyApiKey(
         autoAliases: true,
 
         aliases: {
-          'GET /profiles': 'tenantUsers.getProfiles',
-          'POST /users/logout': 'auth.users.logout',
-          'GET /users/me': 'auth.me',
-          'PATCH /tenants/:tenantId/users/:userId': 'tenantUsers.updateUser',
-          'DELETE /tenants/:tenantId/users/:userId': 'tenantUsers.removeUser',
-          'POST /tenants/:tenantId/users/:userId': 'tenantUsers.addUser',
-          'GET /tenants/:id/users': 'tenantUsers.findByTenant',
-          'GET /tenants/:id/users/:userId': 'tenantUsers.getByTenant',
-          'GET /ping': 'api.ping',
+          "GET /profiles": "tenantUsers.getProfiles",
+          "POST /users/logout": "auth.users.logout",
+          "GET /users/me": "auth.me",
+          "PATCH /tenants/:tenantId/users/:userId": "tenantUsers.updateUser",
+          "DELETE /tenants/:tenantId/users/:userId": "tenantUsers.removeUser",
+          "POST /tenants/:tenantId/users/:userId": "tenantUsers.addUser",
+          "GET /tenants/:id/users": "tenantUsers.findByTenant",
+          "GET /tenants/:id/users/:userId": "tenantUsers.getByTenant",
+          "GET /ping": "api.ping",
         },
         /**
 			* Before call hook. You can check the request.
@@ -184,16 +184,16 @@ function verifyApiKey(
         bodyParsers: {
           json: {
             strict: false,
-            limit: '1MB',
+            limit: "1MB",
           },
           urlencoded: {
             extended: true,
-            limit: '1MB',
+            limit: "1MB",
           },
         },
 
         // Mapping policy setting. More info: https://moleculer.services/docs/0.14/moleculer-web.html#Mapping-policy
-        mappingPolicy: 'all', // Available values: "all", "restrict"
+        mappingPolicy: "all", // Available values: "all", "restrict"
 
         // Enable/disable logging
         logging: true,
@@ -207,7 +207,7 @@ function verifyApiKey(
     logResponseData: null,
     // Serve assets from "public" folder
     assets: {
-      folder: 'public',
+      folder: "public",
       // Options to `server-static` module
       options: {},
     },
@@ -233,22 +233,22 @@ export default class ApiService extends moleculer.Service {
     if (meta.user || meta.tenant) {
       const context = pick(
         ctx,
-        'nodeID',
-        'id',
-        'event',
-        'eventName',
-        'eventType',
-        'eventGroups',
-        'parentID',
-        'requestID',
-        'caller',
-        'params',
-        'meta',
-        'locals'
+        "nodeID",
+        "id",
+        "event",
+        "eventName",
+        "eventType",
+        "eventGroups",
+        "parentID",
+        "requestID",
+        "caller",
+        "params",
+        "meta",
+        "locals"
       );
-      const action = pick(ctx.action, 'rawName', 'name', 'params', 'rest');
+      const action = pick(ctx.action, "rawName", "name", "params", "rest");
       const logInfo = {
-        action: 'AUTH_FAILURE',
+        action: "AUTH_FAILURE",
         details: {
           error,
           context,
@@ -267,9 +267,9 @@ export default class ApiService extends moleculer.Service {
     apiKey: string
   ): Promise<unknown> {
     if (!apiKey)
-      return this.rejectAuth(ctx, throwUnauthorizedError('NO API TOKEN'));
+      return this.rejectAuth(ctx, throwUnauthorizedError("NO API TOKEN"));
 
-    const tenant: Tenant = await ctx.call('tenants.verifyKey', {
+    const tenant: Tenant = await ctx.call("tenants.verifyKey", {
       key: apiKey,
     });
 
@@ -279,7 +279,7 @@ export default class ApiService extends moleculer.Service {
       return Promise.resolve(ctx);
     }
 
-    return this.rejectAuth(ctx, throwUnauthorizedError('INVALID API TOKEN'));
+    return this.rejectAuth(ctx, throwUnauthorizedError("INVALID API TOKEN"));
   }
 
   @Method
@@ -294,28 +294,28 @@ export default class ApiService extends moleculer.Service {
     }
 
     const auth = req.headers.authorization;
-    const profile = req.headers['x-profile'];
+    const profile = req.headers["x-profile"];
 
     if (auth) {
-      const type = auth.split(' ')[0];
+      const type = auth.split(" ")[0];
       let token: string | undefined;
-      if (type === 'Token' || type === 'Bearer') {
-        token = auth.split(' ')[1];
+      if (type === "Token" || type === "Bearer") {
+        token = auth.split(" ")[1];
       }
 
       if (token) {
         try {
           const authUser: any = await ctx.call(
-            'auth.users.resolveToken',
+            "auth.users.resolveToken",
             null,
             { meta: { authToken: token } }
           );
 
-          const user: User = await ctx.call('users.resolveByAuthUser', {
+          const user: User = await ctx.call("users.resolveByAuthUser", {
             authUser: authUser,
           });
 
-          const app: any = await ctx.call('auth.apps.resolveToken');
+          const app: any = await ctx.call("auth.apps.resolveToken");
 
           if (user && user.id) {
             ctx.meta.authUser = authUser;
@@ -324,7 +324,7 @@ export default class ApiService extends moleculer.Service {
 
             if (profile) {
               const tenantWithRole: Tenant = await ctx.call(
-                'tenantUsers.getProfile',
+                "tenantUsers.getProfile",
                 {
                   id: user.id,
                   profile,
@@ -397,7 +397,7 @@ export default class ApiService extends moleculer.Service {
     const alltypes = [...atypes, ...otypes].filter(Boolean);
     const types = [...new Set(alltypes)];
     const valid = await ctx.call<boolean, { types: EndpointType[] }>(
-      'auth.validateType',
+      "auth.validateType",
       { types }
     );
 

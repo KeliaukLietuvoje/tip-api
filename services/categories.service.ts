@@ -1,15 +1,15 @@
-'use strict';
+"use strict";
 
-import moleculer, { Context } from 'moleculer';
-import { Action, Method, Service } from 'moleculer-decorators';
-import DbConnection from '../mixins/database.mixin';
+import moleculer, { Context } from "moleculer";
+import { Action, Method, Service } from "moleculer-decorators";
+import DbConnection from "../mixins/database.mixin";
 import {
   COMMON_DEFAULT_SCOPES,
   COMMON_HIDDEN_FIELDS,
   COMMON_SCOPES,
   EndpointType,
-} from '../types';
-import { UserAuthMeta } from './api.service';
+} from "../types";
+import { UserAuthMeta } from "./api.service";
 
 export interface Category {
   id?: number;
@@ -19,46 +19,46 @@ export interface Category {
 }
 
 @Service({
-  name: 'categories',
+  name: "categories",
 
   mixins: [
     DbConnection({
-      collection: 'categories',
+      collection: "categories",
     }),
   ],
 
   settings: {
     fields: {
       id: {
-        type: 'string',
-        columnType: 'integer',
+        type: "string",
+        columnType: "integer",
         primaryKey: true,
         secure: true,
       },
 
-      name: 'string',
+      name: "string",
       parent: {
-        type: 'number',
-        columnType: 'integer',
-        columnName: 'parentId',
+        type: "number",
+        columnType: "integer",
+        columnName: "parentId",
         populate: {
-          action: 'categories.resolve',
+          action: "categories.resolve",
           params: {
-            populate: 'parent',
+            populate: "parent",
           },
         },
       },
       children: {
         virtual: true,
-        type: 'array',
+        type: "array",
         populate: {
-          keyField: 'id',
-          action: 'categories.populateByProp',
+          keyField: "id",
+          action: "categories.populateByProp",
           params: {
-            populate: 'children',
-            sort: 'name',
+            populate: "children",
+            sort: "name",
             mappingMulti: true,
-            queryKey: 'parent',
+            queryKey: "parent",
           },
         },
       },
@@ -102,9 +102,9 @@ export default class CategoriesService extends moleculer.Service {
     auth: EndpointType.PUBLIC,
   })
   async categories(ctx: Context<{}, UserAuthMeta>) {
-    let items: Category[] = await ctx.call('categories.find', {
-      populate: 'children',
-      fields: ['name', 'children'],
+    let items: Category[] = await ctx.call("categories.find", {
+      populate: "children",
+      fields: ["name", "children"],
     });
 
     return this.mapCategories(items);

@@ -1,16 +1,16 @@
-'use strict';
+"use strict";
 
-import moleculer, { Context } from 'moleculer';
-import { Action, Service } from 'moleculer-decorators';
+import moleculer, { Context } from "moleculer";
+import { Action, Service } from "moleculer-decorators";
 
-import DbConnection from '../mixins/database.mixin';
+import DbConnection from "../mixins/database.mixin";
 import {
   COMMON_DEFAULT_SCOPES,
   COMMON_HIDDEN_FIELDS,
   COMMON_SCOPES,
   EndpointType,
-} from '../types';
-import { UserAuthMeta } from './api.service';
+} from "../types";
+import { UserAuthMeta } from "./api.service";
 
 export interface VisitInfo {
   id?: number;
@@ -18,23 +18,23 @@ export interface VisitInfo {
 }
 
 @Service({
-  name: 'visitInfos',
+  name: "visitInfos",
 
   mixins: [
     DbConnection({
-      collection: 'visitInfos',
+      collection: "visitInfos",
     }),
   ],
 
   settings: {
     fields: {
       id: {
-        type: 'string',
-        columnType: 'integer',
+        type: "string",
+        columnType: "integer",
         primaryKey: true,
         secure: true,
       },
-      name: 'string',
+      name: "string",
       ...COMMON_HIDDEN_FIELDS,
     },
 
@@ -62,9 +62,9 @@ export default class VisitInfosService extends moleculer.Service {
     auth: EndpointType.PUBLIC,
   })
   async getVisitInfos(ctx: Context<{}, UserAuthMeta>) {
-    let items: VisitInfo[] = await ctx.call('visitInfos.find', {
-      populate: 'children',
-      fields: ['name'],
+    let items: VisitInfo[] = await ctx.call("visitInfos.find", {
+      populate: "children",
+      fields: ["name"],
     });
 
     return items;

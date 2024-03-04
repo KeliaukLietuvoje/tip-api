@@ -3,8 +3,8 @@
  * @returns { Promise<void> }
  */
 exports.up = function (knex) {
-  return knex.schema.alterTable('forms', (table) => {
-    table.boolean('isDisabled');
+  return knex.schema.alterTable("tenants", (table) => {
+    table.text("apiKey");
   });
 };
 
@@ -13,7 +13,7 @@ exports.up = function (knex) {
  * @returns { Promise<void> }
  */
 exports.down = function (knex) {
-  return knex.schema.alterTable('forms', (table) => {
-    table.dropColumn('isDisabled');
+  return knex.schema.alterTable("tenants", (table) => {
+    table.dropColumn("apiKey");
   });
 };

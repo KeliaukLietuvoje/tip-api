@@ -1,10 +1,10 @@
-'use strict';
+"use strict";
 
-import _ from 'lodash';
-import { Context } from 'moleculer';
-import filtersMixin from 'moleculer-knex-filters';
-import config from '../knexfile';
-const DbService = require('@moleculer/database').Service;
+import _ from "lodash";
+import { Context } from "moleculer";
+import filtersMixin from "moleculer-knex-filters";
+import config from "../knexfile";
+const DbService = require("@moleculer/database").Service;
 
 function makeMapping(
   data: any[],
@@ -36,7 +36,7 @@ function makeMapping(
 
 export default function (opts: any = {}) {
   const adapter: any = {
-    type: 'Knex',
+    type: "Knex",
     options: {
       knex: config,
       // collection: opts.collection,
@@ -105,7 +105,7 @@ export default function (opts: any = {}) {
           },
         });
 
-        return makeMapping(entities, mapping ? queryKey : '', {
+        return makeMapping(entities, mapping ? queryKey : "", {
           mappingMulti,
           mappingField: mappingField,
         });
@@ -149,7 +149,7 @@ export default function (opts: any = {}) {
       if (schema.actions) {
         for (const action in schema.actions) {
           const params = schema.actions[action].additionalParams;
-          if (typeof params === 'object') {
+          if (typeof params === "object") {
             schema.actions[action].params = {
               ...schema.actions[action].params,
               ...params,

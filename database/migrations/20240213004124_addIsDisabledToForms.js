@@ -3,8 +3,8 @@
  * @returns { Promise<void> }
  */
 exports.up = function (knex) {
-  return knex.schema.alterTable('users', (table) => {
-    table.boolean('isAgreedToTermsOfService');
+  return knex.schema.alterTable("forms", (table) => {
+    table.boolean("isDisabled");
   });
 };
 
@@ -13,7 +13,7 @@ exports.up = function (knex) {
  * @returns { Promise<void> }
  */
 exports.down = function (knex) {
-  return knex.schema.alterTable('users', (table) => {
-    table.dropColumn('isAgreedToTermsOfService');
+  return knex.schema.alterTable("forms", (table) => {
+    table.dropColumn("isDisabled");
   });
 };

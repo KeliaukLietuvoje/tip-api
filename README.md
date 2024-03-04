@@ -1,19 +1,20 @@
 # TIP API
+
 [![License](https://img.shields.io/github/license/KeliaukLietuvoje/tip-api)](https://github.com/KeliaukLietuvoje/tip-api/blob/main/LICENSE)
 [![GitHub issues](https://img.shields.io/github/issues/KeliaukLietuvoje/tip-api)](https://github.com/KeliaukLietuvoje/tip-api/issues)
 [![GitHub stars](https://img.shields.io/github/stars/KeliaukLietuvoje/tip-api)](https://github.com/KeliaukLietuvoje/tip-api/stargazers)
 
 This repository contains the source code and documentation for the TIP API, developed by the Keliauk Lietuvoje.
+
 ## Table of Contents
 
 - [About the Project](#about-the-project)
 - [Getting Started](#getting-started)
-    - [Installation](#installation)
-    - [Usage](#usage)
+  - [Installation](#installation)
+  - [Usage](#usage)
 - [Deployment](#deployment)
 - [Contributing](#contributing)
 - [License](#license)
-
 
 ## About the Project
 
@@ -39,6 +40,7 @@ To get started with the TIP API, follow the instructions below.
    ```
 
 ### Usage
+
 1. Set up the required environment variables. Copy the `.env.example` file to `.env` and provide the necessary values for the variables.
 
 2. Start the API server:

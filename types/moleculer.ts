@@ -1,8 +1,8 @@
-import moleculer, { Context } from 'moleculer';
-import { ActionSchema, ActionParamSchema } from 'moleculer';
-import { IncomingMessage } from 'http';
-import { EndpointType } from './constants';
-import { UserAuthMeta } from '../services/api.service';
+import moleculer, { Context } from "moleculer";
+import { ActionSchema, ActionParamSchema } from "moleculer";
+import { IncomingMessage } from "http";
+import { EndpointType } from "./constants";
+import { UserAuthMeta } from "../services/api.service";
 
 // import {
 //   DbAdapter,
@@ -10,7 +10,7 @@ import { UserAuthMeta } from '../services/api.service';
 //   DbServiceSettings,
 // } from 'moleculer-db';
 export interface EntityChangedParams<T> {
-  type: 'create' | 'update' | 'replace' | 'remove' | 'clear';
+  type: "create" | "update" | "replace" | "remove" | "clear";
   data: T;
   oldData?: T;
 }
@@ -54,7 +54,7 @@ export interface RouteSchemaOpts {
 
 export interface RouteSchema {
   path: string;
-  mappingPolicy?: 'restricted' | 'all';
+  mappingPolicy?: "restricted" | "all";
   opts: RouteSchemaOpts;
   middlewares: ((req: any, res: any, next: any) => void)[];
   authorization?: boolean;

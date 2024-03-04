@@ -74,16 +74,16 @@ WHERE
 
 exports.up = function (knex) {
   return knex.schema
-    .raw('CREATE SCHEMA IF NOT EXISTS publishing')
-    .withSchema('publishing')
-    .createViewOrReplace('objects', function (view) {
+    .raw("CREATE SCHEMA IF NOT EXISTS publishing")
+    .withSchema("publishing")
+    .createViewOrReplace("objects", function (view) {
       view.as(knex.raw(objectsForPublishingQuery));
     });
 };
 
 exports.down = function (knex) {
   return knex.schema
-    .withSchema('publishing')
-    .dropViewIfExists('objects')
-    .raw('DROP SCHEMA IF EXISTS publishing');
+    .withSchema("publishing")
+    .dropViewIfExists("objects")
+    .raw("DROP SCHEMA IF EXISTS publishing");
 };

@@ -1,32 +1,32 @@
-'use strict';
+"use strict";
 
-import authMixin from 'biip-auth-nodejs/mixin';
-import moleculer, { Context } from 'moleculer';
-import { Action, Event, Method, Service } from 'moleculer-decorators';
+import authMixin from "biip-auth-nodejs/mixin";
+import moleculer, { Context } from "moleculer";
+import { Action, Event, Method, Service } from "moleculer-decorators";
 import {
   AUTH_FREELANCERS_GROUP_ID,
   EndpointType,
   throwNotFoundError,
-} from '../types';
-import { UserAuthMeta } from './api.service';
-import { TenantUserRole } from './tenantUsers.service';
-import { User, UserType } from './users.service';
+} from "../types";
+import { UserAuthMeta } from "./api.service";
+import { TenantUserRole } from "./tenantUsers.service";
+import { User, UserType } from "./users.service";
 
 @Service({
-  name: 'auth',
+  name: "auth",
   mixins: [
     authMixin(process.env.AUTH_API_KEY, {
-      host: process.env.AUTH_HOST || '',
-      appHost: process.env.APP_HOST || 'https://tip.ntis.lt',
+      host: process.env.AUTH_HOST || "",
+      appHost: process.env.APP_HOST || "https://tip.ntis.lt",
     }),
   ],
   actions: {
-    'users.resolveToken': {
+    "users.resolveToken": {
       cache: {
-        keys: ['#authToken'],
+        keys: ["#authToken"],
       },
     },
-    'apps.resolveToken': {
+    "apps.resolveToken": {
       cache: {
         keys: [],
       },
@@ -34,19 +34,19 @@ import { User, UserType } from './users.service';
   },
   hooks: {
     after: {
-      login: 'afterUserLoggedIn',
-      'evartai.login': 'afterUserLoggedIn',
-      me: 'addProfiles',
+      login: "afterUserLoggedIn",
+      "evartai.login": "afterUserLoggedIn",
+      me: "addProfiles",
     },
     before: {
-      'evartai.login': 'beforeUserLogin',
+      "evartai.login": "beforeUserLogin",
     },
   },
 })
 export default class AuthService extends moleculer.Service {
   @Action({
     cache: {
-      keys: ['#user.id', '#profile.id'],
+      keys: ["#user.id", "#profile.id"],
     },
   })
   async me(ctx: Context<{}, UserAuthMeta>) {
@@ -72,15 +72,15 @@ export default class AuthService extends moleculer.Service {
 
   @Action({
     params: {
-      authUser: 'any',
-      authUserGroups: 'array',
+      authUser: "any",
+      authUserGroups: "array",
     },
   })
   async createUserWithTenantsIfNeeded(
     ctx: Context<{ authUser: any; authUserGroups: any[] }>
   ) {
     const { authUser, authUserGroups } = ctx.params;
-    const user: User = await ctx.call('users.findOrCreate', {
+    const user: User = await ctx.call("users.findOrCreate", {
       authUser: authUser,
       update: true,
     });
@@ -91,7 +91,7 @@ export default class AuthService extends moleculer.Service {
       );
 
       for (const group of authGroups) {
-        await ctx.call('tenantUsers.createRelationshipsIfNeeded', {
+        await ctx.call("tenantUsers.createRelationshipsIfNeeded", {
           authGroup: group,
           userId: user.id,
         });
@@ -103,12 +103,12 @@ export default class AuthService extends moleculer.Service {
 
   @Action({
     cache: {
-      keys: ['types', '#user.id', '#profile.id'],
+      keys: ["types", "#user.id", "#profile.id"],
     },
     params: {
       types: {
-        type: 'array',
-        items: 'string',
+        type: "array",
+        items: "string",
         enum: Object.values(EndpointType),
       },
     },
@@ -158,22 +158,22 @@ export default class AuthService extends moleculer.Service {
     const meta = { authToken: data.token };
 
     const authUser: any = await this.broker.call(
-      'auth.users.resolveToken',
+      "auth.users.resolveToken",
       null,
       { meta }
     );
     const authUserGroups: any = await this.broker.call(
-      'auth.users.get',
+      "auth.users.get",
       {
         id: authUser?.id,
-        populate: 'groups',
+        populate: "groups",
       },
       { meta }
     );
     const authGroups: any[] = authUserGroups?.groups || [];
 
     const user: User = await this.broker.call(
-      'auth.createUserWithTenantsIfNeeded',
+      "auth.createUserWithTenantsIfNeeded",
       {
         authUser: authUser,
         authUserGroups: authGroups,
@@ -181,7 +181,7 @@ export default class AuthService extends moleculer.Service {
       { meta }
     );
 
-    if (user.type === UserType.ADMIN && process.env.NODE_ENV !== 'local') {
+    if (user.type === UserType.ADMIN && process.env.NODE_ENV !== "local") {
       return throwNotFoundError();
     }
 
@@ -200,7 +200,7 @@ export default class AuthService extends moleculer.Service {
   @Method
   async addProfiles(ctx: any, data: any) {
     if (data?.id && data?.type === UserType.USER) {
-      data.profiles = await ctx.call('tenantUsers.getProfiles');
+      data.profiles = await ctx.call("tenantUsers.getProfiles");
       data.profiles = data.profiles.map((i: any) => ({
         id: i.id,
         name: i.name,
@@ -215,7 +215,7 @@ export default class AuthService extends moleculer.Service {
   }
 
   @Event()
-  async 'cache.clean.auth'() {
+  async "cache.clean.auth"() {
     await this.broker.cacher?.clean(`${this.fullName}.**`);
   }
 }

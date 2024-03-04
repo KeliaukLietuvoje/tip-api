@@ -1,8 +1,8 @@
-'use strict';
+"use strict";
 
-import moleculer, { Context } from 'moleculer';
-import { Action, Event, Service } from 'moleculer-decorators';
-import DbConnection from '../mixins/database.mixin';
+import moleculer, { Context } from "moleculer";
+import { Action, Event, Service } from "moleculer-decorators";
+import DbConnection from "../mixins/database.mixin";
 import {
   BaseModelInterface,
   COMMON_DEFAULT_SCOPES,
@@ -12,14 +12,14 @@ import {
   FieldHookCallback,
   throwNotFoundError,
   throwUnauthorizedError,
-} from '../types';
-import { UserAuthMeta } from './api.service';
-import { Tenant } from './tenants.service';
-import { TenantUserRole } from './tenantUsers.service';
+} from "../types";
+import { UserAuthMeta } from "./api.service";
+import { Tenant } from "./tenants.service";
+import { TenantUserRole } from "./tenantUsers.service";
 
 export enum UserType {
-  ADMIN = 'ADMIN',
-  USER = 'USER',
+  ADMIN = "ADMIN",
+  USER = "USER",
 }
 export interface User extends BaseModelInterface {
   firstName: string;
@@ -31,8 +31,8 @@ export interface User extends BaseModelInterface {
   isAgreedToTermsOfService: boolean;
 }
 
-const VISIBLE_TO_USER_SCOPE = 'tenant';
-const NOT_ADMINS_SCOPE = 'notAdmins';
+const VISIBLE_TO_USER_SCOPE = "tenant";
+const NOT_ADMINS_SCOPE = "notAdmins";
 
 const AUTH_PROTECTED_SCOPES = [
   ...COMMON_DEFAULT_SCOPES,
@@ -48,46 +48,46 @@ export const USERS_DEFAULT_SCOPES = [
 ];
 
 @Service({
-  name: 'users',
+  name: "users",
 
   mixins: [
     DbConnection({
-      collection: 'users',
+      collection: "users",
     }),
   ],
 
   settings: {
     fields: {
       id: {
-        type: 'string',
-        columnType: 'integer',
+        type: "string",
+        columnType: "integer",
         primaryKey: true,
         secure: true,
       },
 
-      firstName: 'string',
+      firstName: "string",
 
-      lastName: 'string',
+      lastName: "string",
 
-      email: 'string',
+      email: "string",
 
-      phone: 'string',
-      isAgreedToTermsOfService: 'boolean',
+      phone: "string",
+      isAgreedToTermsOfService: "boolean",
 
       type: {
-        type: 'string',
+        type: "string",
         enum: Object.values(UserType),
         default: UserType.USER,
       },
 
       authUser: {
-        type: 'number',
-        columnType: 'integer',
-        columnName: 'authUserId',
-        populate: 'auth.users.get',
+        type: "number",
+        columnType: "integer",
+        columnName: "authUserId",
+        populate: "auth.users.get",
         async onRemove({ ctx, entity }: FieldHookCallback) {
           await ctx.call(
-            'auth.users.remove',
+            "auth.users.remove",
             { id: entity.authUserId },
             { meta: ctx?.meta }
           );
@@ -96,13 +96,13 @@ export const USERS_DEFAULT_SCOPES = [
 
       profiles: {
         virtual: true,
-        type: 'array',
-        items: 'object',
+        type: "array",
+        items: "object",
         populate(ctx: any, _values: any, users: any[]) {
           return Promise.all(
             users.map(async (user: any) => {
               return ctx.call(
-                'tenantUsers.getProfiles',
+                "tenantUsers.getProfiles",
                 {},
                 {
                   meta: {
@@ -117,12 +117,12 @@ export const USERS_DEFAULT_SCOPES = [
 
       role: {
         virtual: true,
-        type: 'string',
+        type: "string",
         populate(ctx: any, _values: any, users: any[]) {
           return Promise.all(
             users.map(async (user: any) => {
               if (!ctx.meta.profile?.id) return;
-              return ctx.call('tenantUsers.getRole', {
+              return ctx.call("tenantUsers.getRole", {
                 tenant: ctx.meta.profile.id,
                 user: user.id,
               });
@@ -152,7 +152,7 @@ export const USERS_DEFAULT_SCOPES = [
 
         if (tenantId) {
           const userIds: number[] = await ctx.call(
-            'tenantUsers.findIdsByTenant',
+            "tenantUsers.findIdsByTenant",
             {
               id: tenantId,
               role: query.role,
@@ -210,19 +210,19 @@ export const USERS_DEFAULT_SCOPES = [
 })
 export default class UsersService extends moleculer.Service {
   @Action({
-    rest: 'POST /',
+    rest: "POST /",
     params: {
-      personalCode: 'any',
-      firstName: 'string',
-      lastName: 'string',
-      email: 'string',
-      phone: 'string',
+      personalCode: "any",
+      firstName: "string",
+      lastName: "string",
+      email: "string",
+      phone: "string",
       tenantId: {
-        type: 'number',
+        type: "number",
         optional: true,
       },
       role: {
-        type: 'string',
+        type: "string",
         optional: true,
         default: UserType.USER,
       },
@@ -256,15 +256,15 @@ export default class UsersService extends moleculer.Service {
 
     let tenant: Tenant;
     if (tenantId) {
-      tenant = await ctx.call('tenants.resolve', {
+      tenant = await ctx.call("tenants.resolve", {
         id: tenantId,
       });
 
       if (authenticatedUser?.type !== UserType.ADMIN || !tenant?.id) {
         throw new moleculer.Errors.MoleculerClientError(
-          'Cannot assign user to tenant.',
+          "Cannot assign user to tenant.",
           401,
-          'UNAUTHORIZED'
+          "UNAUTHORIZED"
         );
       }
 
@@ -273,19 +273,19 @@ export default class UsersService extends moleculer.Service {
       authGroupId = tenant.authGroup;
     }
 
-    const authUser: any = await ctx.call('auth.users.invite', data);
+    const authUser: any = await ctx.call("auth.users.invite", data);
 
-    const user: User = await ctx.call('users.findOrCreate', {
+    const user: User = await ctx.call("users.findOrCreate", {
       authUser: authUser,
       ...ctx.params,
     });
 
     if (authGroupId) {
-      const authGroup: any = await ctx.call('auth.groups.get', {
+      const authGroup: any = await ctx.call("auth.groups.get", {
         id: authGroupId,
       });
       if (authGroup && authGroup.id) {
-        await ctx.call('tenantUsers.createRelationshipsIfNeeded', {
+        await ctx.call("tenantUsers.createRelationshipsIfNeeded", {
           authGroup: { ...authGroup, role },
           userId: user.id,
         });
@@ -297,14 +297,14 @@ export default class UsersService extends moleculer.Service {
 
   @Action({
     params: {
-      authUser: 'any',
+      authUser: "any",
     },
     cache: {
-      keys: ['authUser.id'],
+      keys: ["authUser.id"],
     },
   })
   async resolveByAuthUser(ctx: Context<{ authUser: any }>) {
-    const user: User = await ctx.call('users.findOrCreate', {
+    const user: User = await ctx.call("users.findOrCreate", {
       authUser: ctx.params.authUser,
     });
 
@@ -313,25 +313,25 @@ export default class UsersService extends moleculer.Service {
 
   @Action({
     params: {
-      authUser: 'any',
+      authUser: "any",
       update: {
-        type: 'boolean',
+        type: "boolean",
         default: false,
       },
       firstName: {
-        type: 'string',
+        type: "string",
         optional: true,
       },
       lastName: {
-        type: 'string',
+        type: "string",
         optional: true,
       },
       email: {
-        type: 'string',
+        type: "string",
         optional: true,
       },
       phone: {
-        type: 'string',
+        type: "string",
         optional: true,
       },
     },
@@ -351,7 +351,7 @@ export default class UsersService extends moleculer.Service {
 
     const scope = [...USERS_WITHOUT_AUTH_SCOPES];
 
-    const authUserIsAdmin = ['SUPER_ADMIN', UserType.ADMIN].includes(
+    const authUserIsAdmin = ["SUPER_ADMIN", UserType.ADMIN].includes(
       authUser.type
     );
 
@@ -359,7 +359,7 @@ export default class UsersService extends moleculer.Service {
       scope.push(...USERS_WITHOUT_NOT_ADMINS_SCOPE);
     }
 
-    const user: User = await ctx.call('users.findOne', {
+    const user: User = await ctx.call("users.findOne", {
       query: {
         authUser: authUser.id,
       },
@@ -377,7 +377,7 @@ export default class UsersService extends moleculer.Service {
     };
 
     if (user?.id) {
-      return ctx.call('users.update', {
+      return ctx.call("users.update", {
         id: user.id,
         ...dataToSave,
         scope,
@@ -392,17 +392,17 @@ export default class UsersService extends moleculer.Service {
       delete dataToSave.phone;
     }
 
-    return ctx.call('users.create', {
+    return ctx.call("users.create", {
       authUser: authUser.id,
       ...dataToSave,
     });
   }
 
   @Action({
-    rest: 'DELETE /:id',
+    rest: "DELETE /:id",
     params: {
       id: {
-        type: 'number',
+        type: "number",
         convert: true,
       },
     },
@@ -411,44 +411,44 @@ export default class UsersService extends moleculer.Service {
   async removeUser(ctx: Context<{ id: number }, UserAuthMeta>) {
     const { id } = ctx.params;
     const { profile } = ctx.meta;
-    const user = await ctx.call('users.get', { id });
+    const user = await ctx.call("users.get", { id });
 
     if (!user) {
-      return throwNotFoundError('User not found.');
+      return throwNotFoundError("User not found.");
     }
 
     if (profile?.id) {
-      return ctx.call('tenantUsers.removeUser', {
+      return ctx.call("tenantUsers.removeUser", {
         userId: id,
         tenantId: profile.id,
       });
     } else if (ctx.meta.user.type === UserType.ADMIN) {
-      await ctx.call('tenantUsers.removeTenants', {
+      await ctx.call("tenantUsers.removeTenants", {
         userId: id,
       });
     }
 
-    return ctx.call('users.remove', { id });
+    return ctx.call("users.remove", { id });
   }
 
   @Action({
-    rest: 'PATCH /:id',
+    rest: "PATCH /:id",
     params: {
-      id: 'any',
+      id: "any",
       role: {
-        type: 'string',
+        type: "string",
         optional: true,
       },
       email: {
-        type: 'string',
+        type: "string",
         optional: true,
       },
       phone: {
-        type: 'string',
+        type: "string",
         optional: true,
       },
       tenantId: {
-        type: 'number',
+        type: "number",
         optional: true,
       },
     },
@@ -468,21 +468,21 @@ export default class UsersService extends moleculer.Service {
     const { profile, user } = ctx.meta;
     const { id, email, phone, role, tenantId } = ctx.params;
 
-    const userToUpdate: User = await ctx.call('users.get', { id });
+    const userToUpdate: User = await ctx.call("users.get", { id });
 
     if (!userToUpdate) {
-      return throwNotFoundError('User not found.');
+      return throwNotFoundError("User not found.");
     }
 
     if (role) {
-      await ctx.call('tenantUsers.updateUser', {
+      await ctx.call("tenantUsers.updateUser", {
         userId: id,
         tenantId: profile?.id || tenantId,
         role,
       });
     }
 
-    return ctx.call('users.update', {
+    return ctx.call("users.update", {
       id,
       email,
       phone,
@@ -490,25 +490,25 @@ export default class UsersService extends moleculer.Service {
   }
 
   @Action({
-    rest: 'PATCH /agreeToTermsOfService',
+    rest: "PATCH /agreeToTermsOfService",
     types: [EndpointType.NON_AGREEING],
   })
   async agreeToTheConditions(ctx: Context<{}, UserAuthMeta>) {
     const { user } = ctx.meta;
-    return ctx.call('users.update', {
+    return ctx.call("users.update", {
       id: user.id,
       isAgreedToTermsOfService: true,
     });
   }
 
   @Event()
-  async 'users.**'() {
-    this.broker.emit('cache.clean.auth');
+  async "users.**"() {
+    this.broker.emit("cache.clean.auth");
     this.broker.emit(`cache.clean.${this.fullName}`);
   }
 
   @Event()
-  async 'cache.clean.users'() {
+  async "cache.clean.users"() {
     await this.broker.cacher?.clean(`${this.fullName}.**`);
   }
 }

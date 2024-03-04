@@ -1,5 +1,5 @@
-import { createHash } from 'crypto';
-import { Readable } from 'stream';
+import { createHash } from "crypto";
+import { Readable } from "stream";
 
 type QueryObject = { [key: string]: any };
 
@@ -7,13 +7,13 @@ export function toReadableStream(fetchReadable: any): NodeJS.ReadableStream {
   return new Readable({
     async read() {
       if (!fetchReadable?.read) {
-        this.emit('done');
+        this.emit("done");
         return;
       }
 
       const { value, done } = await fetchReadable.read();
       if (done) {
-        this.emit('end');
+        this.emit("end");
         return;
       }
 
@@ -23,7 +23,7 @@ export function toReadableStream(fetchReadable: any): NodeJS.ReadableStream {
 }
 
 export function toMD5Hash(text: string) {
-  return createHash('md5').update(text).digest('hex');
+  return createHash("md5").update(text).digest("hex");
 }
 
 export function roundNumber(number: string, digits: number = 2) {
@@ -38,7 +38,7 @@ export function roundNumber(number: string, digits: number = 2) {
 export function parseToJsonIfNeeded(query: QueryObject | string): QueryObject {
   if (!query) return;
 
-  if (typeof query === 'string') {
+  if (typeof query === "string") {
     try {
       query = JSON.parse(query);
     } catch (err) {}

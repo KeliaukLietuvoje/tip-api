@@ -1,16 +1,16 @@
-import { ServerClient } from 'postmark';
+import { ServerClient } from "postmark";
 
 let client: ServerClient;
 if (process.env.POSTMARK_KEY) {
   client = new ServerClient(process.env.POSTMARK_KEY);
 }
 
-const sender = 'noreply@ntis.lt';
+const sender = "noreply@ntis.lt";
 
 export function emailCanBeSent() {
   if (!client) return false;
 
-  return ['production'].includes(process.env.NODE_ENV);
+  return ["production"].includes(process.env.NODE_ENV);
 }
 
 function hostUrl(isAdmin: boolean = false) {

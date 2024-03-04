@@ -1,5 +1,5 @@
-import jwt, { VerifyErrors } from 'jsonwebtoken';
-import { Tenant } from '../services/tenants.service';
+import jwt, { VerifyErrors } from "jsonwebtoken";
+import { Tenant } from "../services/tenants.service";
 
 export function verifyToken(token: string) {
   return new Promise<Tenant | undefined>((resolve, reject) => {

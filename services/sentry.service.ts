@@ -1,8 +1,8 @@
 // @ts-ignore
-import SentryMixin from 'moleculer-sentry';
-import { Integrations } from '@sentry/node';
-import { Service } from 'moleculer-decorators';
-import moleculer from 'moleculer';
+import SentryMixin from "moleculer-sentry";
+import { Integrations } from "@sentry/node";
+import { Service } from "moleculer-decorators";
+import moleculer from "moleculer";
 
 @Service({
   mixins: [SentryMixin],
@@ -13,7 +13,7 @@ import moleculer from 'moleculer';
       /** @type {String} DSN given by sentry. */
       dsn: process.env.SENTRY_DSN,
       /** @type {String} Name of event fired by "Event" exported in tracing. */
-      tracingEventName: '$tracing.spans',
+      tracingEventName: "$tracing.spans",
       /** @type {Object} Additional options for `Sentry.init`. */
       options: {
         environment: process.env.ENVIRONMENT,
@@ -26,7 +26,7 @@ import moleculer from 'moleculer';
         ],
       },
       /** @type {String?} Name of the meta containing user infos. */
-      userMetaKey: 'user',
+      userMetaKey: "user",
     },
   },
 })
