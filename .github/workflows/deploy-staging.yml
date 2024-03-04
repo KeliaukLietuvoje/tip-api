@@ -24,8 +24,6 @@ jobs:
           push: true
 
       - name: Trigger deploy
-        # TODO: remove if
-        if: false
         uses: AplinkosMinisterija/reusable-workflows/.github/actions/trigger-workflow-and-wait@main
         with:
           application-id: ${{ secrets.TIP_TRIGGER_DEPLOY_APPLICATION_ID }}
