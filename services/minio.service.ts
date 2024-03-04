@@ -266,53 +266,53 @@ export default class MinioService extends Moleculer.Service {
     }
   }
 
-  // async started() {
-  //   try {
-  //     const bucketExists: boolean = await this.actions.bucketExists({
-  //       bucketName: BUCKET_NAME(),
-  //     });
+  async started() {
+    try {
+      const bucketExists: boolean = await this.actions.bucketExists({
+        bucketName: BUCKET_NAME(),
+      });
 
-  //     if (!bucketExists) {
-  //       await this.actions.makeBucket({
-  //         bucketName: BUCKET_NAME(),
-  //       });
+      if (!bucketExists) {
+        await this.actions.makeBucket({
+          bucketName: BUCKET_NAME(),
+        });
 
-  //       await this.client.setBucketPolicy(
-  //         BUCKET_NAME(),
-  //         JSON.stringify({
-  //           Version: '2012-10-17',
-  //           Statement: [
-  //             {
-  //               Effect: 'Allow',
-  //               Principal: {
-  //                 AWS: ['*'],
-  //               },
-  //               Action: ['s3:GetObject'],
-  //               Resource: [`arn:aws:s3:::${BUCKET_NAME()}/uploads/fishTypes/*`],
-  //             },
-  //           ],
-  //         }),
-  //       );
+        await this.client.setBucketPolicy(
+          BUCKET_NAME(),
+          JSON.stringify({
+            Version: "2012-10-17",
+            Statement: [
+              {
+                Effect: "Allow",
+                Principal: {
+                  AWS: ["*"],
+                },
+                Action: ["s3:GetObject"],
+                Resource: [`arn:aws:s3:::${BUCKET_NAME()}/uploads/fishTypes/*`],
+              },
+            ],
+          })
+        );
 
-  //       await this.client.setBucketLifecycle(BUCKET_NAME(), {
-  //         Rule: [
-  //           {
-  //             ID: 'Expiration Rule For Temp Files',
-  //             Status: 'Enabled',
-  //             Filter: {
-  //               Prefix: 'temp/*',
-  //             },
-  //             Expiration: {
-  //               Days: '7',
-  //             },
-  //           },
-  //         ],
-  //       });
-  //     }
-  //   } catch (err) {
-  //     this.broker.logger.fatal(err);
-  //   }
-  // }
+        await this.client.setBucketLifecycle(BUCKET_NAME(), {
+          Rule: [
+            {
+              ID: "Expiration Rule For Temp Files",
+              Status: "Enabled",
+              Filter: {
+                Prefix: "temp/*",
+              },
+              Expiration: {
+                Days: "7",
+              },
+            },
+          ],
+        });
+      }
+    } catch (err) {
+      this.broker.logger.fatal(err);
+    }
+  }
 
   @Method
   getObjectUrl(

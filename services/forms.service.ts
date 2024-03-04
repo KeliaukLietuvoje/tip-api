@@ -336,7 +336,7 @@ function isUrlValid({ value }: FieldHookCallback) {
 
           if (
             !ctx?.meta?.statusChanged ||
-            entity.status === FormStatus.APPROVED
+            entity?.status === FormStatus.APPROVED
           )
             return;
           else if (!user?.id) return value;
@@ -851,9 +851,11 @@ export default class FormsService extends moleculer.Service {
 
   @Method
   validateIsActive({ entity }: FieldHookCallback) {
+    if (!entity?.id) return true;
+
     return (
-      entity.status === FormStatus.APPROVED ||
-      `Cannot change isActive with status ${entity.status}`
+      entity?.status === FormStatus.APPROVED ||
+      `Cannot change isActive with status ${entity?.status || "unknown"}`
     );
   }
 
@@ -903,11 +905,18 @@ export default class FormsService extends moleculer.Service {
 
     const tenant = form.tenant || form.tenantId;
 
-    if (!form?.id || [FormStatus.REJECTED].includes(form?.status)) {
+    // form uploaded via api
+    const isApiUpload = !user?.id;
+
+    if (
+      !form?.id ||
+      (!isApiUpload && !form?.createdBy) ||
+      [FormStatus.REJECTED].includes(form?.status)
+    ) {
       return invalid;
     }
 
-    if (!user?.id) {
+    if (isApiUpload) {
       return {
         edit: true,
         validate: true,
@@ -921,16 +930,13 @@ export default class FormsService extends moleculer.Service {
     if (isCreatedByTenant || isCreatedByUser) {
       return {
         validate: false,
-        edit: [
-          FormStatus.RETURNED,
-          ...(isAdmin ? [FormStatus.APPROVED] : []),
-        ].includes(form.status),
+        edit: [FormStatus.RETURNED, FormStatus.APPROVED].includes(form?.status),
       };
     } else if (isAdmin) {
       return {
         edit: [FormStatus.APPROVED].includes(form.status),
         validate: [FormStatus.CREATED, FormStatus.SUBMITTED].includes(
-          form.status
+          form?.status
         ),
       };
     }
@@ -1001,7 +1007,7 @@ export default class FormsService extends moleculer.Service {
     // TODO: send email for admins.
     if (
       !emailCanBeSent() ||
-      [FormStatus.CREATED, FormStatus.SUBMITTED].includes(form.status)
+      [FormStatus.CREATED, FormStatus.SUBMITTED].includes(form?.status)
     ) {
       return;
     }
@@ -1026,7 +1032,7 @@ export default class FormsService extends moleculer.Service {
   async "forms.updated"(ctx: Context<EntityChangedParams<Form>>) {
     const { oldData: prevForm, data: form } = ctx.params;
 
-    if (prevForm?.status !== form.status) {
+    if (prevForm?.status !== form?.status) {
       const { comment } = ctx.options?.parentCtx?.params as any;
       const typesByStatus = {
         [FormStatus.SUBMITTED]: FormHistoryTypes.UPDATED,
@@ -1038,7 +1044,7 @@ export default class FormsService extends moleculer.Service {
       await ctx.call("forms.histories.create", {
         form: form.id,
         comment,
-        type: typesByStatus[form.status],
+        type: typesByStatus[form?.status],
       });
     }
   }
