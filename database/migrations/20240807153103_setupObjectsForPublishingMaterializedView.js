@@ -1,3 +1,7 @@
+const {
+  objectsForPublishingQuery,
+} = require("./20240222100134_setupObjectsForPublishing");
+
 const query = `
 WITH categories_by_form_id AS (
   SELECT
@@ -60,6 +64,8 @@ SELECT
   f.photos,
   f.geom,
   f.is_active,
+  f.created_at,
+  f.deleted_at,
   fd.categories,
   fd.sub_categories,
   fd.additional_infos
@@ -72,20 +78,24 @@ WHERE
   AND f.deleted_at IS NULL
 `;
 
-exports.objectsForPublishingQuery = query;
-
 exports.up = function (knex) {
   return knex.schema
-    .raw("CREATE SCHEMA IF NOT EXISTS publishing")
     .withSchema("publishing")
-    .createViewOrReplace("objects", function (view) {
+    .dropView("objects")
+    .createMaterializedView("objects", function (view) {
       view.as(knex.raw(query));
-    });
+    })
+    .raw(
+      `CREATE INDEX objects_geom_idx ON publishing.objects USING GIST (geom)`
+    );
 };
 
 exports.down = function (knex) {
   return knex.schema
     .withSchema("publishing")
-    .dropViewIfExists("objects")
-    .raw("DROP SCHEMA IF EXISTS publishing");
+    .raw(`DROP INDEX publishing.objects_geom_idx`)
+    .dropMaterializedView("objects")
+    .createView("objects", function (view) {
+      view.as(knex.raw(objectsForPublishingQuery));
+    });
 };

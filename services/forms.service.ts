@@ -1,6 +1,6 @@
 "use strict";
 import { FeatureCollection, parse } from "geojsonjs";
-import { every, isArray, isEmpty, isNumber } from "lodash";
+import { every, isArray, isEmpty, isNumber, merge } from "lodash";
 import moleculer, { Context, RestSchema } from "moleculer";
 import { Action, Event, Method, Service } from "moleculer-decorators";
 import PostgisMixin, { GeometryType } from "moleculer-postgis";
@@ -14,8 +14,10 @@ import {
   COMMON_FIELDS,
   COMMON_SCOPES,
   ContextMeta,
+  EndpointType,
   EntityChangedParams,
   FieldHookCallback,
+  LKS_SRID,
   TENANT_FIELD,
   throwAlreadyExistError,
   throwBadRequestError,
@@ -40,6 +42,26 @@ export const Seasons = {
   SPRING: "SPRING",
   AUTUMN: "AUTUMN",
 };
+
+const publicFields = [
+  "photos",
+  "isPaid",
+  "isAdaptedForForeigners",
+  "id",
+  "seasons",
+  "geom",
+  "description",
+  "descriptionLT",
+  "nameLT",
+  "name",
+  "urlLT",
+  "url",
+  "visitDuration",
+  "visitInfo",
+  "additionalInfos",
+  "categories",
+  "subCategories",
+];
 
 export interface Photo {
   url: string;
@@ -202,7 +224,7 @@ function isUrlValid({ value }: FieldHookCallback) {
       collection: "forms",
     }),
     PostgisMixin({
-      srid: 3346,
+      srid: LKS_SRID,
     }),
   ],
 
@@ -248,12 +270,14 @@ function isUrlValid({ value }: FieldHookCallback) {
         onUpdate: isUrlLTValid,
         onReplace: isUrlLTValid,
       },
+
       url: {
         type: "string",
         onCreate: isUrlValid,
         onUpdate: isUrlValid,
         onReplace: isUrlValid,
       },
+
       visitDuration: {
         type: "object",
         properties: {
@@ -268,6 +292,7 @@ function isUrlValid({ value }: FieldHookCallback) {
           },
         },
       },
+
       visitInfo: {
         type: "number",
         columnType: "integer",
@@ -309,12 +334,13 @@ function isUrlValid({ value }: FieldHookCallback) {
           action: "categories.resolve",
         },
       },
+
       isPaid: "boolean",
       isAdaptedForForeigners: "boolean",
       isActive: {
         type: "boolean",
         optional: true,
-        default: true,
+        default: false,
         validate: "validateIsActive",
       },
       status: {
@@ -344,6 +370,7 @@ function isUrlValid({ value }: FieldHookCallback) {
           return value || FormStatus.SUBMITTED;
         },
       },
+
       photos: {
         type: "array",
         columnType: "json",
@@ -418,6 +445,55 @@ function isUrlValid({ value }: FieldHookCallback) {
   },
 })
 export default class FormsService extends moleculer.Service {
+  @Action({
+    rest: <RestSchema>{
+      method: "GET",
+      basePath: "/public/forms",
+      path: "/",
+    },
+    auth: EndpointType.PUBLIC,
+  })
+  async publicList(ctx: Context) {
+    const params = merge({}, ctx.params || {}, {
+      query: {
+        isActive: true,
+      },
+    });
+
+    return ctx.call("forms.list", { ...params, fields: publicFields });
+  }
+
+  @Action({
+    rest: <RestSchema>{
+      method: "GET",
+      basePath: "/public/forms/:id",
+      path: "/",
+    },
+    auth: EndpointType.PUBLIC,
+    params: {
+      id: {
+        type: "number",
+        convert: true,
+      },
+    },
+  })
+  async publicFindOne(ctx: Context<{ id: string }>) {
+    const form: Form = await this.findEntity(ctx, {
+      ...ctx.params,
+      fields: publicFields,
+      query: {
+        id: ctx.params.id,
+        isActive: true,
+      },
+    });
+
+    if (!form) {
+      throwNotFoundError("Form not found");
+    }
+
+    return form;
+  }
+
   @Action({
     rest: "GET /:id/history",
     params: {
@@ -1041,6 +1117,13 @@ export default class FormsService extends moleculer.Service {
         [FormStatus.APPROVED]: FormHistoryTypes.UPDATED,
       };
 
+      if (form?.status === FormStatus.APPROVED) {
+        await this.updateEntity(ctx, {
+          id: form.id,
+          isActive: true,
+        });
+      }
+
       await ctx.call("forms.histories.create", {
         form: form.id,
         comment,
@@ -1067,7 +1150,12 @@ export default class FormsService extends moleculer.Service {
             : FormHistoryTypes.CREATED,
         });
 
-        if (!autoApprove) {
+        if (autoApprove) {
+          await this.updateEntity(ctx, {
+            id: form.id,
+            isActive: true,
+          });
+        } else {
           await this.sendNotificationOnStatusChange(form);
         }
       })
