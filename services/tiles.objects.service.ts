@@ -1,30 +1,29 @@
-"use strict";
+'use strict';
 
-import moleculer from "moleculer";
-import { Service } from "moleculer-decorators";
+import { TilesMixin } from '@aplinkosministerija/moleculer-accounts';
+import moleculer from 'moleculer';
+import { Event, Service } from 'moleculer-decorators';
+import config from '../knexfile';
 import {
   COMMON_DEFAULT_SCOPES,
   COMMON_FIELDS,
   COMMON_SCOPES,
   EndpointType,
   LKS_SRID,
-} from "../types";
-import _ from "lodash";
-import config from "../knexfile";
-import { TilesMixin } from "@aplinkosministerija/moleculer-accounts";
+} from '../types';
 
-const isLocalDevelopment = process.env.NODE_ENV === "local";
+const isLocalDevelopment = process.env.NODE_ENV === 'local';
 
 @Service({
-  name: "tiles.objects",
+  name: 'tiles.objects',
   mixins: [
     TilesMixin({
       config,
       opts: {
-        collection: "publishing.objects",
+        collection: 'publishing.objects',
       },
       srid: LKS_SRID,
-      layerName: "objects",
+      layerName: 'objects',
       maxClusteringZoomLevel: 12,
       preloadClustersOnStart: !isLocalDevelopment,
     }),
@@ -32,66 +31,66 @@ const isLocalDevelopment = process.env.NODE_ENV === "local";
   settings: {
     fields: {
       id: {
-        type: "string",
-        columnType: "integer",
+        type: 'string',
+        columnType: 'integer',
         primaryKey: true,
         secure: true,
       },
 
-      descriptionLt: "string",
-      descriptionEn: "string",
+      descriptionLt: 'string',
+      descriptionEn: 'string',
 
-      nameLt: "string",
-      nameEn: "string",
+      nameLt: 'string',
+      nameEn: 'string',
 
-      urlLt: "string",
-      urlEn: "string",
+      urlLt: 'string',
+      urlEn: 'string',
 
       visitDuration: {
-        type: "object",
+        type: 'object',
         properties: {
-          from: "number",
-          to: "number",
-          isAllDay: "boolean",
+          from: 'number',
+          to: 'number',
+          isAllDay: 'boolean',
         },
       },
 
-      visitInfo: "string",
+      visitInfo: 'string',
 
       seasons: {
-        type: "array",
-        items: "string",
+        type: 'array',
+        items: 'string',
       },
 
-      isPaid: "boolean",
-      isAdaptedForForeigners: "boolean",
+      isPaid: 'boolean',
+      isAdaptedForForeigners: 'boolean',
 
       photos: {
-        type: "array",
-        columnType: "json",
-        items: { type: "object" },
+        type: 'array',
+        columnType: 'json',
+        items: { type: 'object' },
       },
 
       geom: {
-        type: "any",
+        type: 'any',
         geom: {
-          properties: ["id"],
+          properties: ['id'],
         },
       },
 
-      isActive: "boolean",
+      isActive: 'boolean',
 
       categories: {
-        type: "array",
-        items: "string",
+        type: 'array',
+        items: 'string',
       },
       subCategories: {
-        type: "array",
-        items: "string",
+        type: 'array',
+        items: 'string',
       },
       additionalInfos: {
-        type: "array",
-        items: "string",
+        type: 'array',
+        items: 'string',
       },
       createdAt: COMMON_FIELDS.createdAt,
       deletedAt: COMMON_FIELDS.deletedAt,
@@ -122,4 +121,9 @@ const isLocalDevelopment = process.env.NODE_ENV === "local";
     },
   },
 })
-export default class TilesObjectsService extends moleculer.Service {}
+export default class TilesObjectsService extends moleculer.Service {
+  @Event()
+  async 'cache.clean.tiles.objects'() {
+    await this.renewSuperclusterIndex();
+  }
+}

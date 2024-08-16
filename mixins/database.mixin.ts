@@ -1,10 +1,14 @@
-"use strict";
+'use strict';
 
-import _ from "lodash";
-import { Context } from "moleculer";
-import filtersMixin from "moleculer-knex-filters";
-import config from "../knexfile";
-const DbService = require("@moleculer/database").Service;
+import _ from 'lodash';
+import { Context } from 'moleculer';
+import filtersMixin from 'moleculer-knex-filters';
+import config from '../knexfile';
+const DbService = require('@moleculer/database').Service;
+
+export const MaterializedView = {
+  OBJECTS: 'objects',
+};
 
 function makeMapping(
   data: any[],
@@ -12,7 +16,7 @@ function makeMapping(
   options?: {
     mappingMulti?: boolean;
     mappingField?: string;
-  }
+  },
 ) {
   if (!mapping) return data;
 
@@ -36,7 +40,7 @@ function makeMapping(
 
 export default function (opts: any = {}) {
   const adapter: any = {
-    type: "Knex",
+    type: 'Knex',
     options: {
       knex: config,
       // collection: opts.collection,
@@ -86,10 +90,9 @@ export default function (opts: any = {}) {
           mapping?: boolean;
           mappingMulti?: boolean;
           mappingField: string;
-        }>
+        }>,
       ): Promise<any> {
-        const { id, queryKey, query, mapping, mappingMulti, mappingField } =
-          ctx.params;
+        const { id, queryKey, query, mapping, mappingMulti, mappingField } = ctx.params;
 
         delete ctx.params.queryKey;
         delete ctx.params.id;
@@ -105,7 +108,7 @@ export default function (opts: any = {}) {
           },
         });
 
-        return makeMapping(entities, mapping ? queryKey : "", {
+        return makeMapping(entities, mapping ? queryKey : '', {
           mappingMulti,
           mappingField: mappingField,
         });
@@ -116,11 +119,17 @@ export default function (opts: any = {}) {
       filterQueryIds(ids: number[], queryIds?: any) {
         if (!queryIds) return ids;
 
-        queryIds = (Array.isArray(queryIds) ? queryIds : [queryIds]).map(
-          (id: any) => parseInt(id)
-        );
+        queryIds = (Array.isArray(queryIds) ? queryIds : [queryIds]).map((id: any) => parseInt(id));
 
         return ids.filter((id) => queryIds.indexOf(id) >= 0);
+      },
+      async refreshMaterializedView(ctx: Context, name: string) {
+        const adapter = await this.getAdapter(ctx);
+
+        await adapter.client.schema.refreshMaterializedView(name);
+        return {
+          success: true,
+        };
       },
     },
 
@@ -133,7 +142,7 @@ export default function (opts: any = {}) {
               mappingMulti: boolean;
               mappingField: string;
             }>,
-            data: any[]
+            data: any[],
           ) {
             const { mapping, mappingMulti, mappingField } = ctx.params;
             return makeMapping(data, mapping, {
@@ -149,7 +158,7 @@ export default function (opts: any = {}) {
       if (schema.actions) {
         for (const action in schema.actions) {
           const params = schema.actions[action].additionalParams;
-          if (typeof params === "object") {
+          if (typeof params === 'object') {
             schema.actions[action].params = {
               ...schema.actions[action].params,
               ...params,
