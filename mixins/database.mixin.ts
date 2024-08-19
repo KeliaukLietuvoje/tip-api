@@ -7,7 +7,7 @@ import config from '../knexfile';
 const DbService = require('@moleculer/database').Service;
 
 export const MaterializedView = {
-  OBJECTS: 'objects',
+  OBJECTS: 'publishing.objects',
 };
 
 function makeMapping(

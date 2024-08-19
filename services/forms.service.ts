@@ -22,7 +22,7 @@ import {
   throwAlreadyExistError,
   throwBadRequestError,
   throwNotFoundError,
-  throwValidationError,
+  throwValidationError
 } from '../types';
 import { toReadableStream } from '../utils';
 import { emailCanBeSent } from '../utils/mails';
@@ -441,9 +441,8 @@ export default class FormsService extends moleculer.Service {
     },
   })
   async publicGetOne(ctx: Context<{ id: string }>) {
-    return ctx.call('tiles.objects.resolve', {
+    return ctx.call('tiles.objects.get', {
       id: ctx.params.id,
-      throwIfNotExist: true,
     });
   }
 

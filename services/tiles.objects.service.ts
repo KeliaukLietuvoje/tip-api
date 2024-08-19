@@ -4,12 +4,13 @@ import { TilesMixin } from '@aplinkosministerija/moleculer-accounts';
 import moleculer from 'moleculer';
 import { Event, Service } from 'moleculer-decorators';
 import config from '../knexfile';
+import { MaterializedView } from '../mixins/database.mixin';
 import {
   COMMON_DEFAULT_SCOPES,
   COMMON_FIELDS,
   COMMON_SCOPES,
   EndpointType,
-  LKS_SRID,
+  LKS_SRID
 } from '../types';
 
 const isLocalDevelopment = process.env.NODE_ENV === 'local';
@@ -20,7 +21,7 @@ const isLocalDevelopment = process.env.NODE_ENV === 'local';
     TilesMixin({
       config,
       opts: {
-        collection: 'publishing.objects',
+        collection: MaterializedView.OBJECTS,
       },
       srid: LKS_SRID,
       layerName: 'objects',
@@ -92,8 +93,8 @@ const isLocalDevelopment = process.env.NODE_ENV === 'local';
         type: 'array',
         items: 'string',
       },
-      createdAt: COMMON_FIELDS.createdAt,
-      deletedAt: COMMON_FIELDS.deletedAt,
+      createdAt: {...COMMON_FIELDS.createdAt},
+      deletedAt: {...COMMON_FIELDS.deletedAt},
     },
     scopes: {
       ...COMMON_SCOPES,
