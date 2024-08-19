@@ -320,10 +320,8 @@ export default class MinioService extends Moleculer.Service {
     isPrivate: boolean = false,
     bucketName: string = BUCKET_NAME()
   ) {
-    const hasSSL = process.env.MINIO_USESSL === "true";
-
-    let hostUrl = `http${hasSSL ? "s" : ""}://${process.env.MINIO_ENDPOINT}`;
-
+    let hostUrl = process.env.MINIO_PUBLIC_URL;
+    
     if (isPrivate) {
       hostUrl = `${process.env.SERVER_HOST}/minio`;
     }
