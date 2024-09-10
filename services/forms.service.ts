@@ -842,7 +842,7 @@ export default class FormsService extends moleculer.Service {
       subFieldName = "",
       errorPrefix: string
     ) => {
-      if (!array.every((i) => typeof i === "string")) return array || [];
+      if (!array?.every((i) => typeof i === "string")) return array || [];
 
       return await this.validateExternalMulti(
         ctx,
