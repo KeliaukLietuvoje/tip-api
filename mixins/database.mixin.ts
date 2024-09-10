@@ -1,13 +1,13 @@
-'use strict';
+"use strict";
 
-import _ from 'lodash';
-import { Context } from 'moleculer';
-import filtersMixin from 'moleculer-knex-filters';
-import config from '../knexfile';
-const DbService = require('@moleculer/database').Service;
+import _ from "lodash";
+import { Context } from "moleculer";
+import filtersMixin from "moleculer-knex-filters";
+import config from "../knexfile";
+const DbService = require("@moleculer/database").Service;
 
 export const MaterializedView = {
-  OBJECTS: 'publishing.objects',
+  OBJECTS: "objects"
 };
 
 function makeMapping(
@@ -16,7 +16,7 @@ function makeMapping(
   options?: {
     mappingMulti?: boolean;
     mappingField?: string;
-  },
+  }
 ) {
   if (!mapping) return data;
 
@@ -30,7 +30,7 @@ function makeMapping(
     if (options?.mappingMulti) {
       return {
         ...acc,
-        [`${item[mapping]}`]: [...(acc[`${item[mapping]}`] || []), value],
+        [`${item[mapping]}`]: [...(acc[`${item[mapping]}`] || []), value]
       };
     }
 
@@ -40,16 +40,16 @@ function makeMapping(
 
 export default function (opts: any = {}) {
   const adapter: any = {
-    type: 'Knex',
+    type: "Knex",
     options: {
       knex: config,
       // collection: opts.collection,
-      tableName: opts.collection,
-    },
+      tableName: opts.collection
+    }
   };
 
   const cache = {
-    enabled: false,
+    enabled: false
   };
 
   opts = _.defaultsDeep(opts, { adapter }, { cache: opts.cache || cache });
@@ -58,7 +58,7 @@ export default function (opts: any = {}) {
 
   if (opts?.createActions === undefined || opts?.createActions !== false) {
     removeRestActions.replace = {
-      rest: null as any,
+      rest: null as any
     };
   }
 
@@ -90,9 +90,10 @@ export default function (opts: any = {}) {
           mapping?: boolean;
           mappingMulti?: boolean;
           mappingField: string;
-        }>,
+        }>
       ): Promise<any> {
-        const { id, queryKey, query, mapping, mappingMulti, mappingField } = ctx.params;
+        const { id, queryKey, query, mapping, mappingMulti, mappingField } =
+          ctx.params;
 
         delete ctx.params.queryKey;
         delete ctx.params.id;
@@ -104,22 +105,26 @@ export default function (opts: any = {}) {
           ...ctx.params,
           query: {
             ...(query || {}),
-            [queryKey]: { $in: id },
-          },
+            [queryKey]: { $in: id }
+          }
         });
 
-        return makeMapping(entities, mapping ? queryKey : '', {
+        if (!entities.length) return [];
+
+        return makeMapping(entities, mapping ? queryKey : "", {
           mappingMulti,
-          mappingField: mappingField,
+          mappingField: mappingField
         });
-      },
+      }
     },
 
     methods: {
       filterQueryIds(ids: number[], queryIds?: any) {
         if (!queryIds) return ids;
 
-        queryIds = (Array.isArray(queryIds) ? queryIds : [queryIds]).map((id: any) => parseInt(id));
+        queryIds = (Array.isArray(queryIds) ? queryIds : [queryIds]).map(
+          (id: any) => parseInt(id)
+        );
 
         return ids.filter((id) => queryIds.indexOf(id) >= 0);
       },
@@ -128,9 +133,9 @@ export default function (opts: any = {}) {
 
         await adapter.client.schema.refreshMaterializedView(name);
         return {
-          success: true,
+          success: true
         };
-      },
+      }
     },
 
     hooks: {
@@ -142,31 +147,31 @@ export default function (opts: any = {}) {
               mappingMulti: boolean;
               mappingField: string;
             }>,
-            data: any[],
+            data: any[]
           ) {
             const { mapping, mappingMulti, mappingField } = ctx.params;
             return makeMapping(data, mapping, {
               mappingMulti,
-              mappingField,
+              mappingField
             });
-          },
-        ],
-      },
+          }
+        ]
+      }
     },
 
     merged(schema: any) {
       if (schema.actions) {
         for (const action in schema.actions) {
           const params = schema.actions[action].additionalParams;
-          if (typeof params === 'object') {
+          if (typeof params === "object") {
             schema.actions[action].params = {
               ...schema.actions[action].params,
-              ...params,
+              ...params
             };
           }
         }
       }
-    },
+    }
   };
 
   return schema;
