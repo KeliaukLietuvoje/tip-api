@@ -441,9 +441,8 @@ export default class FormsService extends moleculer.Service {
     },
   })
   async publicGetOne(ctx: Context<{ id: string }>) {
-    return ctx.call('tiles.objects.resolve', {
+    return ctx.call('tiles.objects.get', {
       id: ctx.params.id,
-      throwIfNotExist: true,
     });
   }
 
