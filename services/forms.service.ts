@@ -70,6 +70,7 @@ export interface ApiForm {
   isPaid: boolean;
   isAdaptedForForeigners: boolean;
   photos: Photo[];
+  isActive?: boolean;
 }
 
 export interface Form extends BaseModelInterface {
@@ -552,6 +553,7 @@ export default class FormsService extends moleculer.Service {
     const tenant = meta.tenant;
     ctx.meta.profile = { id: tenant.id };
     ctx.meta.autoApprove = true;
+    ctx.params.isActive = true;
 
     const form = await ctx.call("forms.findOne", {
       query: { externalId: params.externalId, tenant: tenant.id }
