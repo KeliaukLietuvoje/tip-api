@@ -1005,7 +1005,7 @@ export default class FormsService extends moleculer.Service {
   @Method
   async validateStatusChange(
     ctx: Context<
-      { id: number },
+      { id: number; isActive?: boolean },
       UserAuthMeta & RequestAutoApprove & FormStatusChanged
     >
   ) {
@@ -1016,6 +1016,7 @@ export default class FormsService extends moleculer.Service {
       ctx.meta.statusChanged = true;
     } else if (user?.type === UserType.ADMIN) {
       ctx.meta.autoApprove = true;
+      ctx.params.isActive = true;
     }
 
     return ctx;
@@ -1100,18 +1101,15 @@ export default class FormsService extends moleculer.Service {
       };
 
       if (form?.status === FormStatus.APPROVED) {
-        await this.updateEntity(ctx, {
-          id: form.id,
-          isActive: true
-        });
         await this.refreshObjects(ctx);
       }
 
-      await ctx.call("forms.histories.create", {
-        form: form.id,
-        comment,
-        type: typesByStatus[form?.status]
-      });
+      await this.createFormHistory(
+        ctx,
+        form.id,
+        typesByStatus[form?.status],
+        comment
+      );
     }
   }
 
@@ -1126,19 +1124,13 @@ export default class FormsService extends moleculer.Service {
 
     await Promise.all(
       forms.map(async (form) => {
-        await ctx.call("forms.histories.create", {
-          form: form.id,
-          type: autoApprove
-            ? FormHistoryTypes.APPROVED
-            : FormHistoryTypes.CREATED
-        });
+        await this.createFormHistory(
+          ctx,
+          form.id,
+          autoApprove ? FormHistoryTypes.APPROVED : FormHistoryTypes.CREATED
+        );
 
-        if (autoApprove) {
-          await this.updateEntity(ctx, {
-            id: form.id,
-            isActive: true
-          });
-        } else {
+        if (!autoApprove) {
           await this.sendNotificationOnStatusChange(form);
         }
       })
