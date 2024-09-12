@@ -108,6 +108,8 @@ export default function (opts: any = {}) {
           },
         });
 
+        if (!entities.length) return [];
+
         return makeMapping(entities, mapping ? queryKey : '', {
           mappingMulti,
           mappingField: mappingField,
