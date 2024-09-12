@@ -904,11 +904,7 @@ export default class FormsService extends moleculer.Service {
     // form uploaded via api
     const isApiUpload = !user?.id;
 
-    if (
-      !form?.id ||
-      (!isApiUpload && !form?.createdBy) ||
-      [FormStatus.REJECTED].includes(form?.status)
-    ) {
+    if (!form?.id || [FormStatus.REJECTED].includes(form?.status)) {
       return invalid;
     }
 
