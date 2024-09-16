@@ -794,8 +794,8 @@ export default class FormsService extends moleculer.Service {
       if (!this.validateCoordinates(coordinatesWGS)) throwBadRequestError(coordinatesErr);
 
       const transform = transformation('EPSG:4326', '3346');
-      const transformed = transform.forward(coordinatesWGS).reverse();
-      newForm.geom = this.createPointFeatureCollection(transformed);
+      const transformed = transform.forward(coordinatesWGS);
+      newForm.geom = this.createPointFeatureCollection(transformed.reverse());
     }
 
     if (coordinatesLKS) {
