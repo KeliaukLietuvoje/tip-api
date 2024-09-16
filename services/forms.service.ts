@@ -22,7 +22,7 @@ import {
   throwAlreadyExistError,
   throwBadRequestError,
   throwNotFoundError,
-  throwValidationError
+  throwValidationError,
 } from '../types';
 import { toReadableStream } from '../utils';
 import { emailCanBeSent } from '../utils/mails';
@@ -70,6 +70,7 @@ export interface ApiForm {
   isPaid: boolean;
   isAdaptedForForeigners: boolean;
   photos: Photo[];
+  isActive?: boolean;
 }
 
 export interface Form extends BaseModelInterface {
@@ -132,7 +133,7 @@ async function validateCategories({ value, ctx }: FieldHookCallback) {
   if (!value) return;
 
   const dbCategories: Category[] = await ctx.call('categories.find', {
-    query: { parent: { $exists: false }, id: { $in: value } },
+    query: { id: { $in: value } },
   });
 
   const isValid = dbCategories.length === value.length;
@@ -539,6 +540,7 @@ export default class FormsService extends moleculer.Service {
     const tenant = meta.tenant;
     ctx.meta.profile = { id: tenant.id };
     ctx.meta.autoApprove = true;
+    ctx.params.isActive = true;
 
     const form = await ctx.call('forms.findOne', {
       query: { externalId: params.externalId, tenant: tenant.id },
@@ -801,36 +803,37 @@ export default class FormsService extends moleculer.Service {
       newForm.geom = this.createPointFeatureCollection(coordinatesLKS);
     }
 
-    if (categories) {
-      newForm.categories = await this.validateExternalMulti(
-        ctx,
-        categories,
-        'categories',
-        '',
-        errorPrefix,
-      );
-    }
+    const validateStringsArray = async (
+      ctx: moleculer.Context<any, {}, moleculer.GenericObject>,
+      array: any[],
+      fieldName: string,
+      subFieldName = '',
+      errorPrefix: string,
+    ) => {
+      if (!array?.every((i) => typeof i === 'string')) return array || [];
 
-    if (subCategories) {
-      newForm.subCategories = await this.validateExternalMulti(
-        ctx,
-        subCategories,
-        'categories',
-        'subcategories',
-        errorPrefix,
-      );
-    }
-    if (additionalInfos) {
-      newForm.additionalInfos = await this.validateExternalMulti(
-        ctx,
-        additionalInfos,
-        'additionalInfos',
-        '',
-        errorPrefix,
-      );
-    }
+      return await this.validateExternalMulti(ctx, array, fieldName, subFieldName, errorPrefix);
+    };
 
-    if (visitInfo) {
+    newForm.categories = await validateStringsArray(ctx, categories, 'categories', '', errorPrefix);
+
+    newForm.subCategories = await validateStringsArray(
+      ctx,
+      subCategories,
+      'categories',
+      'subcategories',
+      errorPrefix,
+    );
+
+    newForm.additionalInfos = await validateStringsArray(
+      ctx,
+      additionalInfos,
+      'additionalInfos',
+      '',
+      errorPrefix,
+    );
+
+    if (typeof visitInfo === 'string') {
       const dbVisitInfo: VisitInfo = await ctx.call(`visitInfos.findOne`, {
         query: { name: visitInfo },
       });
@@ -901,11 +904,7 @@ export default class FormsService extends moleculer.Service {
     // form uploaded via api
     const isApiUpload = !user?.id;
 
-    if (
-      !form?.id ||
-      (!isApiUpload && !form?.createdBy) ||
-      [FormStatus.REJECTED].includes(form?.status)
-    ) {
+    if (!form?.id || [FormStatus.REJECTED].includes(form?.status)) {
       return invalid;
     }
 
@@ -943,7 +942,10 @@ export default class FormsService extends moleculer.Service {
 
   @Method
   async validateStatusChange(
-    ctx: Context<{ id: number }, UserAuthMeta & RequestAutoApprove & FormStatusChanged>,
+    ctx: Context<
+      { id: number; isActive?: boolean },
+      UserAuthMeta & RequestAutoApprove & FormStatusChanged
+    >,
   ) {
     const { id } = ctx.params;
 
@@ -952,6 +954,7 @@ export default class FormsService extends moleculer.Service {
       ctx.meta.statusChanged = true;
     } else if (user?.type === UserType.ADMIN) {
       ctx.meta.autoApprove = true;
+      ctx.params.isActive = true;
     }
 
     return ctx;
@@ -1028,18 +1031,10 @@ export default class FormsService extends moleculer.Service {
       };
 
       if (form?.status === FormStatus.APPROVED) {
-        await this.updateEntity(ctx, {
-          id: form.id,
-          isActive: true,
-        });
         await this.refreshObjects(ctx);
       }
 
-      await ctx.call('forms.histories.create', {
-        form: form.id,
-        comment,
-        type: typesByStatus[form?.status],
-      });
+      await this.createFormHistory(ctx, form.id, typesByStatus[form?.status], comment);
     }
   }
 
@@ -1052,17 +1047,13 @@ export default class FormsService extends moleculer.Service {
 
     await Promise.all(
       forms.map(async (form) => {
-        await ctx.call('forms.histories.create', {
-          form: form.id,
-          type: autoApprove ? FormHistoryTypes.APPROVED : FormHistoryTypes.CREATED,
-        });
+        await this.createFormHistory(
+          ctx,
+          form.id,
+          autoApprove ? FormHistoryTypes.APPROVED : FormHistoryTypes.CREATED,
+        );
 
-        if (autoApprove) {
-          await this.updateEntity(ctx, {
-            id: form.id,
-            isActive: true,
-          });
-        } else {
+        if (!autoApprove) {
           await this.sendNotificationOnStatusChange(form);
         }
       }),
