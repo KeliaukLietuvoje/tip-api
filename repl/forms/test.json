@@ -1,0 +1,16 @@
+[
+  {
+    "nameLT": "form1",
+    "categories": [1, 2],
+    "subCategories": [2],
+    "additionalInfos": [1],
+    "visitInfo": 1
+  },
+  {
+    "nameLT": "form2",
+    "categories": [3, 4],
+    "subCategories": [],
+    "additionalInfos": [1, 2],
+    "visitInfo": 2
+  }
+]

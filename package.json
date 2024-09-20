@@ -13,7 +13,7 @@
     "lint:sarif": "set SARIF_ESLINT_EMBED=true && yarn run lint --format @microsoft/eslint-formatter-sarif --output-file eslint-results.sarif",
     "dc:up": "docker-compose -p tip-api up --build -d",
     "dc:down": "docker-compose -p tip-api down",
-    "prepare": "husky install"
+    "prepare": "husky"
   },
   "keywords": [
     "microservices",
@@ -39,6 +39,7 @@
     "jest-cli": "^27.5.1",
     "moleculer-repl": "^0.7.0",
     "prettier": "2.5.1",
+    "prettier-plugin-organize-imports": "^4.0.0",
     "ts-jest": "^27.1.3",
     "ts-node": "^10.5.0"
   },
@@ -74,6 +75,7 @@
     "moleculer-sentry": "^2.0.0",
     "moleculer-web": "^0.10.4",
     "moment": "^2.29.4",
+    "mongo-query-to-postgres-jsonb": "^0.2.17",
     "nats": "^2.6.0",
     "objection": "^3.0.1",
     "pg": "^8.10.0",
