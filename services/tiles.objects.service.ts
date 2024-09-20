@@ -13,6 +13,7 @@ const isLocalDevelopment = process.env.NODE_ENV === 'local';
 @Service({
   name: 'tiles.objects',
   mixins: [
+    QueryJsonMixin(),
     TilesMixin({
       config,
       opts: {
@@ -23,7 +24,6 @@ const isLocalDevelopment = process.env.NODE_ENV === 'local';
       maxClusteringZoomLevel: 12,
       preloadClustersOnStart: !isLocalDevelopment,
     }),
-    QueryJsonMixin(),
   ],
   settings: {
     fields: {
