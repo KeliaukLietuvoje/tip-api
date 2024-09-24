@@ -306,7 +306,10 @@ export default class MinioService extends Moleculer.Service {
                 AWS: ['*'],
               },
               Action: ['s3:GetObject'],
-              Resource: [`arn:aws:s3:::${BUCKET_NAME()}/uploads/icons/*`],
+              Resource: [
+                `arn:aws:s3:::${BUCKET_NAME()}/uploads/icons/*`,
+                `arn:aws:s3:::${BUCKET_NAME()}/uploads/forms/*`,
+              ],
             },
           ],
         }),
