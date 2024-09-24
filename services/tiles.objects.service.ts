@@ -5,19 +5,15 @@ import moleculer from 'moleculer';
 import { Event, Service } from 'moleculer-decorators';
 import config from '../knexfile';
 import { MaterializedView } from '../mixins/database.mixin';
-import {
-  COMMON_DEFAULT_SCOPES,
-  COMMON_FIELDS,
-  COMMON_SCOPES,
-  EndpointType,
-  LKS_SRID,
-} from '../types';
+import QueryJsonMixin from '../mixins/queryJson.mixin';
+import { COMMON_FIELDS, EndpointType, LKS_SRID } from '../types';
 
 const isLocalDevelopment = process.env.NODE_ENV === 'local';
 
 @Service({
   name: 'tiles.objects',
   mixins: [
+    QueryJsonMixin(),
     TilesMixin({
       config,
       opts: {
@@ -56,7 +52,14 @@ const isLocalDevelopment = process.env.NODE_ENV === 'local';
         },
       },
 
-      visitInfo: 'string',
+      visitInfo: {
+        type: 'object',
+        properties: {
+          id: 'number',
+          name: 'string',
+          nameEn: 'string',
+        },
+      },
 
       seasons: {
         type: 'array',
@@ -83,23 +86,44 @@ const isLocalDevelopment = process.env.NODE_ENV === 'local';
 
       categories: {
         type: 'array',
-        items: 'string',
+        items: {
+          type: 'object',
+          properties: {
+            id: 'number',
+            name: 'string',
+            nameEn: 'string',
+          },
+        },
       },
       subCategories: {
         type: 'array',
-        items: 'string',
+        items: 'object',
+        properties: {
+          id: 'number',
+          name: 'string',
+          nameEn: 'string',
+        },
       },
       additionalInfos: {
         type: 'array',
-        items: 'string',
+        items: 'object',
+        properties: {
+          id: 'number',
+          name: 'string',
+          nameEn: 'string',
+          icon: 'string',
+        },
+      },
+      tenant: {
+        type: 'object',
+        properties: {
+          id: 'number',
+          name: 'string',
+          code: 'string',
+        },
       },
       createdAt: { ...COMMON_FIELDS.createdAt },
-      deletedAt: { ...COMMON_FIELDS.deletedAt },
     },
-    scopes: {
-      ...COMMON_SCOPES,
-    },
-    defaultScopes: [...COMMON_DEFAULT_SCOPES],
   },
   actions: {
     list: {

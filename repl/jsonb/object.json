@@ -1,0 +1,28 @@
+[
+  {
+    "nameLT": "ojbect",
+    "categories": {
+      "contact": {
+        "firstName": "Sam",
+        "lastName": "Sammy",
+        "hobbies": [
+          { "id": 1, "name": "football", "tools": ["ball", "shoes"] },
+          { "id": 2, "name": "basketball", "tools": ["ball"] }
+        ]
+      }
+    }
+  },
+  {
+    "nameLT": "ojbect2",
+    "categories": {
+      "contact": {
+        "firstName": "John",
+        "lastName": "Johnee",
+        "hobbies": [
+          { "id": 1, "name": "hunting", "tools": ["gun"] },
+          { "id": 2, "name": "fishing", "tools": ["alus"] }
+        ]
+      }
+    }
+  }
+]
