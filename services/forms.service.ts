@@ -300,6 +300,7 @@ function isUrlValid({ value }: FieldHookCallback) {
           action: 'categories.resolve',
         },
       },
+
       subCategories: {
         type: 'array',
         onCreate: validateSubCategories,

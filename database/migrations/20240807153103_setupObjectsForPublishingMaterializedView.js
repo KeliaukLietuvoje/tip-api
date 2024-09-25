@@ -1,6 +1,4 @@
-const {
-  objectsForPublishingQuery,
-} = require("./20240222100134_setupObjectsForPublishing");
+const { objectsForPublishingQuery } = require('./20240222100134_setupObjectsForPublishing');
 
 const query = `
 WITH categories_by_form_id AS (
@@ -78,24 +76,24 @@ WHERE
   AND f.deleted_at IS NULL
 `;
 
+exports.query = query;
+
 exports.up = function (knex) {
   return knex.schema
-    .withSchema("publishing")
-    .dropView("objects")
-    .createMaterializedView("objects", function (view) {
+    .withSchema('publishing')
+    .dropView('objects')
+    .createMaterializedView('objects', function (view) {
       view.as(knex.raw(query));
     })
-    .raw(
-      `CREATE INDEX objects_geom_idx ON publishing.objects USING GIST (geom)`
-    );
+    .raw(`CREATE INDEX objects_geom_idx ON publishing.objects USING GIST (geom)`);
 };
 
 exports.down = function (knex) {
   return knex.schema
-    .withSchema("publishing")
+    .withSchema('publishing')
     .raw(`DROP INDEX publishing.objects_geom_idx`)
-    .dropMaterializedView("objects")
-    .createView("objects", function (view) {
+    .dropMaterializedView('objects')
+    .createView('objects', function (view) {
       view.as(knex.raw(objectsForPublishingQuery));
     });
 };
