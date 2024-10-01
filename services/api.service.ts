@@ -16,6 +16,7 @@ export interface UserAuthMeta {
   app: any;
   authToken: string;
   authUser: any;
+  tenant?: Tenant;
 }
 
 export interface TenantAuthMeta {

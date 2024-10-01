@@ -616,8 +616,8 @@ export default class FormsService extends moleculer.Service {
   }
 
   @Action()
-  async getExternalForms(ctx: Context<any>) {
-    const tenant = (ctx.meta as any)?.tenant;
+  async getExternalForms(ctx: Context<any, UserAuthMeta>) {
+    const tenant = ctx.meta?.tenant;
 
     const forms: Form = await ctx.call('forms.list', {
       ...ctx?.params,
@@ -633,9 +633,9 @@ export default class FormsService extends moleculer.Service {
       convert: true,
     },
   })
-  async getExternalForm(ctx: Context<{ externalId: number }>) {
+  async getExternalForm(ctx: Context<{ externalId: number }, UserAuthMeta>) {
     const params = ctx.params;
-    const tenant = (ctx.meta as any)?.tenant;
+    const tenant = ctx.meta?.tenant;
 
     const form: Form = await ctx.call('forms.findOne', {
       query: { externalId: params.externalId, tenant: tenant.id },
