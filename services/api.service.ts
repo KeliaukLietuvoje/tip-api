@@ -95,7 +95,7 @@ function verifyApiKey(
         },
       },
       {
-        path: '/forms',
+        path: '/forms/external',
         authorization: false,
         authentication: false,
         whitelist: [
@@ -107,12 +107,12 @@ function verifyApiKey(
           'forms.getExternalForm',
         ],
         aliases: {
-          'GET /external/list': 'forms.getExternalForms',
-          'GET /external/:externalId': 'forms.getExternalForm',
-          'POST /external': 'forms.createExternalForm',
-          'POST /external/import': 'forms.importExternalForms',
-          'PATCH /external/:externalId': 'forms.updateExternalForm',
-          'DELETE /external/:externalId': 'forms.deleteExternalForm',
+          'GET /': 'forms.getExternalForms',
+          'GET /:externalId': 'forms.getExternalForm',
+          'POST /': 'forms.createExternalForm',
+          'POST /import': 'forms.importExternalForms',
+          'PATCH /:externalId': 'forms.updateExternalForm',
+          'DELETE /:externalId': 'forms.deleteExternalForm',
         },
         onBeforeCall: verifyApiKey,
       },
