@@ -618,10 +618,10 @@ export default class FormsService extends moleculer.Service {
   @Action()
   async getExternalForms(ctx: Context<any, UserAuthMeta>) {
     const tenant = ctx.meta?.tenant;
-
+    const params = ctx?.params;
     const forms: Form = await ctx.call('forms.list', {
-      ...ctx?.params,
-      query: { ...(ctx?.params?.query || {}), tenant: tenant.id },
+      ...params,
+      query: { ...(params?.query || {}), tenant: tenant.id },
     });
 
     return forms;
