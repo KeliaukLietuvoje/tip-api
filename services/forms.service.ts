@@ -129,11 +129,14 @@ const populatePermissions = (field: string) => {
   };
 };
 
-async function validateCategories({ value, ctx }: FieldHookCallback) {
+async function validateCategories({ value, ctx, params, entity }: FieldHookCallback) {
   if (!value) return;
 
+  const subcategories = params.subCategories || entity.subCategories;
+  const hasSubcategories = subcategories && subcategories.length;
+
   const dbCategories: Category[] = await ctx.call('categories.find', {
-    query: { id: { $in: value } },
+    query: { ...(hasSubcategories && { parent: { $exists: false } }), id: { $in: value } },
   });
 
   const isValid = dbCategories.length === value.length;
@@ -610,6 +613,36 @@ export default class FormsService extends moleculer.Service {
     });
 
     return { success: true };
+  }
+
+  @Action()
+  async getExternalForms(ctx: Context<any>) {
+    const tenant = (ctx.meta as any)?.tenant;
+
+    const forms: Form = await ctx.call('forms.list', {
+      ...ctx?.params,
+      query: { ...(ctx?.params?.query || {}), tenant: tenant.id },
+    });
+
+    return forms;
+  }
+
+  @Action({
+    externalId: {
+      type: 'string',
+      convert: true,
+    },
+  })
+  async getExternalForm(ctx: Context<{ externalId: number }>) {
+    const params = ctx.params;
+    const tenant = (ctx.meta as any)?.tenant;
+
+    const form: Form = await ctx.call('forms.findOne', {
+      query: { externalId: params.externalId, tenant: tenant.id },
+      populate: 'visitInfo,additionalInfos,subCategories,categories',
+    });
+
+    return form;
   }
 
   @Action({
