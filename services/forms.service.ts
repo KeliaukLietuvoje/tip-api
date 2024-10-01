@@ -639,7 +639,7 @@ export default class FormsService extends moleculer.Service {
 
     const form: Form = await ctx.call('forms.findOne', {
       query: { externalId: params.externalId, tenant: tenant.id },
-      populate: 'visitInfo,additionalInfos,subCategories,categories',
+      populate: 'visitInfo,additionalInfos,subCategories,categories,geom',
     });
 
     return form;

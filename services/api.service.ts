@@ -106,7 +106,7 @@ function verifyApiKey(
           'forms.getExternalForm',
         ],
         aliases: {
-          'GET /external': 'forms.getExternalForms',
+          'GET /external/list': 'forms.getExternalForms',
           'GET /external/:externalId': 'forms.getExternalForm',
           'POST /external': 'forms.createExternalForm',
           'POST /external/import': 'forms.importExternalForms',
