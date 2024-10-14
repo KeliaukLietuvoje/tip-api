@@ -121,9 +121,9 @@ const AUTH_PROTECTED_SCOPES = [...COMMON_DEFAULT_SCOPES, VISIBLE_TO_USER_SCOPE];
 
 const populatePermissions = (field: string) => {
   return function (ctx: Context<{}, UserAuthMeta>, _values: any, forms: any[]) {
-    const { user, profile } = ctx?.meta;
+    const { user, profile, authUser } = ctx?.meta;
     return forms.map((form: any) => {
-      const editingPermissions = this.hasPermissionToEdit(form, user, profile);
+      const editingPermissions = this.hasPermissionToEdit(form, user, authUser, profile);
       return !!editingPermissions[field];
     });
   };
@@ -917,26 +917,31 @@ export default class FormsService extends moleculer.Service {
   validateStatus({ ctx, value, entity }: FieldHookCallback) {
     const { user, profile, authUser } = ctx.meta;
 
-    throwAlreadyExistError(JSON.stringify({ authUser, test: 'test' }));
-
     if (!value || !user?.id) return true;
 
     const isAdmin = user.type === UserType.ADMIN;
+    const isSuperAdmin = authUser.type === UserType.SUPER_ADMIN;
 
     const adminStatuses = [FormStatus.REJECTED, FormStatus.RETURNED, FormStatus.APPROVED];
 
     const newStatuses = [FormStatus.CREATED, FormStatus.APPROVED];
 
     const error = `Cannot set status with value ${value}`;
+
     if (!entity?.id) {
-      return newStatuses.includes(value) || error;
+      return newStatuses.includes(value) ? true : error;
     }
 
-    const editingPermissions = this.hasPermissionToEdit(entity, user, authUser, profile);
+    const { edit, validate } = this.hasPermissionToEdit(entity, user, authUser, profile);
 
-    if (editingPermissions.edit) {
-      return isAdmin ? value === FormStatus.APPROVED : value === FormStatus.SUBMITTED || error;
-    } else if (editingPermissions.validate) {
+    if (edit) {
+      return (
+        isSuperAdmin ||
+        (isAdmin && value === FormStatus.APPROVED) ||
+        value === FormStatus.SUBMITTED ||
+        error
+      );
+    } else if (validate) {
       return adminStatuses.includes(value) || error;
     }
 
@@ -982,7 +987,7 @@ export default class FormsService extends moleculer.Service {
       };
     } else if (isAdmin) {
       return {
-        edit: [FormStatus.APPROVED].includes(form.status),
+        edit: form.status === FormStatus.APPROVED,
         validate: [FormStatus.CREATED, FormStatus.SUBMITTED].includes(form?.status),
       };
     }
