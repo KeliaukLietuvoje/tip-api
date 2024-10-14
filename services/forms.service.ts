@@ -537,10 +537,9 @@ export default class FormsService extends moleculer.Service {
         convert: true,
       },
       nameLT: 'string',
-      status: {
-        type: 'string',
-        enum: Object.values(FormStatus),
-        default: FormStatus.APPROVED,
+      isActive: {
+        type: 'boolean',
+        default: true,
       },
     },
   })
@@ -549,11 +548,7 @@ export default class FormsService extends moleculer.Service {
     const meta = ctx.meta as any;
     const tenant = meta.tenant;
     ctx.meta.profile = { id: tenant.id };
-
-    const isApproved = params.status === FormStatus.APPROVED;
-
-    ctx.meta.autoApprove = isApproved;
-    ctx.params.isActive = isApproved;
+    ctx.meta.autoApprove = true;
 
     const form = await ctx.call('forms.findOne', {
       query: { externalId: params.externalId, tenant: tenant.id },
@@ -610,6 +605,10 @@ export default class FormsService extends moleculer.Service {
               convert: true,
             },
             nameLT: 'string',
+            isActive: {
+              type: 'boolean',
+              default: true,
+            },
           },
         },
       },
@@ -620,6 +619,7 @@ export default class FormsService extends moleculer.Service {
     const forms = params.forms;
     const meta = ctx.meta as any;
     const tenant = meta.tenant;
+    ctx.meta.autoApprove = true;
 
     const uniqueForms = new Set(forms.map((v) => v.externalId));
 
@@ -645,9 +645,6 @@ export default class FormsService extends moleculer.Service {
       const formToUpdate: Form = await ctx.call('forms.findOne', {
         query: { externalId: form.externalId, tenant: tenant.id },
       });
-      const isApproved = form.status === FormStatus.APPROVED;
-      ctx.meta.autoApprove = isApproved;
-      form.isActive = isApproved;
 
       if (formToUpdate) {
         await ctx.call('forms.update', {
