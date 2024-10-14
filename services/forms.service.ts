@@ -340,7 +340,7 @@ function isUrlValid({ value }: FieldHookCallback) {
           const { user, authUser } = ctx?.meta;
 
           if (!ctx?.meta?.statusChanged || entity?.status === FormStatus.APPROVED) return;
-          else if (!user?.id || authUser.type === UserType.SUPER_ADMIN) return value;
+          else if (!user?.id) return value;
 
           return value || FormStatus.SUBMITTED;
         },
@@ -960,36 +960,33 @@ export default class FormsService extends moleculer.Service {
   } {
     const invalid = { edit: false, validate: false };
 
-    const tenant = form.tenant || form.tenantId;
-
-    // check if the form creation is either via an API or performed by a super admin
-    const isCreatedByApiOrSuperAdmin = !user?.id || authUser?.type === UserType.SUPER_ADMIN;
-
-    if (!form?.id || form?.status === FormStatus.REJECTED) {
+    if (!form?.id || form.status === FormStatus.REJECTED) {
       return invalid;
     }
 
+    const tenant = form.tenant || form.tenantId;
+    const isSuperAdmin = authUser?.type === UserType.SUPER_ADMIN;
+    const isCreatedByApiOrSuperAdmin = !user?.id || isSuperAdmin;
+
     if (isCreatedByApiOrSuperAdmin) {
-      return {
-        edit: true,
-        validate: authUser.type === UserType.SUPER_ADMIN,
-      };
+      const canValidate =
+        isSuperAdmin && [FormStatus.CREATED, FormStatus.SUBMITTED].includes(form.status);
+      return { edit: true, validate: canValidate };
     }
 
     const isCreatedByUser = !tenant && user && user.id === form.createdBy;
-    const isCreatedByTenant = profile && profile.id === tenant;
-    const isAdmin = user.type === UserType.ADMIN;
+    const isCreatedByTenant = profile?.id === tenant;
+    const isAdmin = user?.type === UserType.ADMIN;
 
-    if (isCreatedByTenant || isCreatedByUser) {
-      return {
-        validate: false,
-        edit: [FormStatus.RETURNED, FormStatus.APPROVED].includes(form?.status),
-      };
-    } else if (isAdmin) {
-      return {
-        edit: form.status === FormStatus.APPROVED,
-        validate: [FormStatus.CREATED, FormStatus.SUBMITTED].includes(form?.status),
-      };
+    if (isCreatedByUser || isCreatedByTenant) {
+      const canEdit = [FormStatus.RETURNED, FormStatus.APPROVED].includes(form.status);
+      return { edit: canEdit, validate: false };
+    }
+
+    if (isAdmin) {
+      const canEdit = form.status === FormStatus.APPROVED;
+      const canValidate = [FormStatus.CREATED, FormStatus.SUBMITTED].includes(form.status);
+      return { edit: canEdit, validate: canValidate };
     }
 
     return invalid;
