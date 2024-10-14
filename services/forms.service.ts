@@ -1080,7 +1080,7 @@ export default class FormsService extends moleculer.Service {
   async 'forms.updated'(ctx: Context<EntityChangedParams<Form>>) {
     const { oldData: prevForm, data: form } = ctx.params;
 
-    if (prevForm?.status == FormStatus.APPROVED) {
+    if (form?.status == FormStatus.APPROVED) {
       await this.createFormHistory(ctx, form.id, FormHistoryTypes.UPDATED);
       await this.refreshObjects(ctx);
       return 
