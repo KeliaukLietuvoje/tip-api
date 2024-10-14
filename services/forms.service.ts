@@ -22,7 +22,7 @@ import {
   throwAlreadyExistError,
   throwBadRequestError,
   throwNotFoundError,
-  throwValidationError,
+  throwValidationError
 } from '../types';
 import { toReadableStream } from '../utils';
 import { emailCanBeSent } from '../utils/mails';
@@ -1083,6 +1083,9 @@ export default class FormsService extends moleculer.Service {
     if (prevForm.status == FormStatus.APPROVED) {
       await this.createFormHistory(ctx, form.id, FormHistoryTypes.UPDATED);
       await this.refreshObjects(ctx);
+
+      
+      return 
     }
 
     if (prevForm?.status !== form?.status) {
