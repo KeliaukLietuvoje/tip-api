@@ -63,7 +63,7 @@ export default class AuthService extends moleculer.Service {
       };
     }
 
-    return { ...data, authUser };
+    return { ...data, authUser, test: 'test' };
   }
 
   @Action({
