@@ -18,14 +18,14 @@ import { User, UserType } from './users.service';
   ],
   actions: {
     'users.resolveToken': {
-      cache: {
-        keys: ['#authToken'],
-      },
+      // cache: {
+      //   keys: ['#authToken'],
+      // },
     },
     'apps.resolveToken': {
-      cache: {
-        keys: [],
-      },
+      // cache: {
+      //   keys: [],
+      // },
     },
   },
   hooks: {
@@ -94,9 +94,9 @@ export default class AuthService extends moleculer.Service {
   }
 
   @Action({
-    cache: {
-      keys: ['types', '#user.id', '#profile.id'],
-    },
+    // cache: {
+    //   keys: ['types', '#user.id', '#profile.id'],
+    // },
     params: {
       types: {
         type: 'array',
