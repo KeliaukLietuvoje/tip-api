@@ -41,9 +41,9 @@ import { User, UserType } from './users.service';
 })
 export default class AuthService extends moleculer.Service {
   @Action({
-    cache: {
-      keys: ['#user.id', '#profile.id'],
-    },
+    // cache: {
+    //   keys: ['#user.id', '#profile.id'],
+    // },
   })
   async me(ctx: Context<{}, UserAuthMeta>) {
     const { user, authUser } = ctx.meta;
