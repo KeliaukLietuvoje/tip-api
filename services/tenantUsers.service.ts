@@ -1,9 +1,9 @@
-"use strict";
+'use strict';
 
-import moleculer, { Context } from "moleculer";
-import { Action, Event, Service } from "moleculer-decorators";
+import moleculer, { Context } from 'moleculer';
+import { Action, Event, Service } from 'moleculer-decorators';
 
-import DbConnection from "../mixins/database.mixin";
+import DbConnection from '../mixins/database.mixin';
 import {
   BaseModelInterface,
   COMMON_DEFAULT_SCOPES,
@@ -12,14 +12,14 @@ import {
   EndpointType,
   throwNotFoundError,
   throwUnauthorizedError,
-} from "../types";
-import { UserAuthMeta } from "./api.service";
-import { Tenant } from "./tenants.service";
-import { User, UserType } from "./users.service";
+} from '../types';
+import { UserAuthMeta } from './api.service';
+import { Tenant } from './tenants.service';
+import { User, UserType } from './users.service';
 
 export enum TenantUserRole {
-  ADMIN = "ADMIN",
-  USER = "USER",
+  ADMIN = 'ADMIN',
+  USER = 'USER',
 }
 
 export interface TenantUser extends BaseModelInterface {
@@ -28,44 +28,44 @@ export interface TenantUser extends BaseModelInterface {
   role: TenantUserRole;
 }
 @Service({
-  name: "tenantUsers",
+  name: 'tenantUsers',
 
   mixins: [
     DbConnection({
       rest: false,
-      collection: "tenantUsers",
+      collection: 'tenantUsers',
     }),
   ],
 
   settings: {
     fields: {
       id: {
-        type: "string",
-        columnType: "integer",
+        type: 'string',
+        columnType: 'integer',
         primaryKey: true,
         secure: true,
       },
 
       tenant: {
-        type: "number",
-        columnName: "tenantId",
+        type: 'number',
+        columnName: 'tenantId',
         immutable: true,
         populate: {
-          action: "tenants.resolve",
+          action: 'tenants.resolve',
         },
       },
 
       user: {
-        type: "number",
-        columnName: "userId",
+        type: 'number',
+        columnName: 'userId',
         immutable: true,
         populate: {
-          action: "users.resolve",
+          action: 'users.resolve',
         },
       },
 
       role: {
-        type: "string",
+        type: 'string',
         enum: Object.values(TenantUserRole),
         default: TenantUserRole.USER,
       },
@@ -84,22 +84,22 @@ export default class TenantUsersService extends moleculer.Service {
   @Action({
     params: {
       tenant: {
-        type: "number",
+        type: 'number',
         convert: true,
       },
       user: {
-        type: "number",
+        type: 'number',
         convert: true,
       },
     },
   })
   async getRole(ctx: Context<{ tenant: number; user: number }>) {
-    const tenantUser: TenantUser = await ctx.call("tenantUsers.findOne", {
+    const tenantUser: TenantUser = await ctx.call('tenantUsers.findOne', {
       query: {
         tenant: ctx.params.tenant,
         user: ctx.params.user,
       },
-      fields: ["role"],
+      fields: ['role'],
     });
 
     return tenantUser?.role;
@@ -107,99 +107,94 @@ export default class TenantUsersService extends moleculer.Service {
   @Action({
     params: {
       id: {
-        type: "number",
+        type: 'number',
         convert: true,
       },
       filter: {
-        type: "any",
+        type: 'any',
         optional: true,
       },
       query: {
-        type: "any",
+        type: 'any',
         optional: true,
       },
     },
     types: [EndpointType.ADMIN, EndpointType.TENANT_ADMIN],
   })
-  async findByTenant(
-    ctx: Context<{ id: number; query?: any; filter?: any }, UserAuthMeta>
-  ) {
+  async findByTenant(ctx: Context<{ id: number; query?: any; filter?: any }, UserAuthMeta>) {
     const { id, query, filter } = ctx.params;
-    const tenant: Tenant = await ctx.call("tenants.get", { id });
+    const tenant: Tenant = await ctx.call('tenants.get', { id });
     if (!tenant || !tenant.id) {
-      return throwNotFoundError("Tenant not found.");
+      return throwNotFoundError('Tenant not found.');
     }
 
     return ctx.call(
-      "users.list",
+      'users.list',
       {
         query,
         filter,
-        populate: "role",
+        populate: 'role',
       },
       {
         meta: {
           profile: ctx.meta.profile || tenant,
         },
-      }
+      },
     );
   }
 
   @Action({
     params: {
       id: {
-        type: "number",
+        type: 'number',
         convert: true,
       },
       userId: {
-        type: "number",
+        type: 'number',
         convert: true,
       },
     },
     types: [EndpointType.ADMIN, EndpointType.TENANT_ADMIN],
   })
   async getByTenant(
-    ctx: Context<
-      { id: number; userId: number; query?: any; filter?: any },
-      UserAuthMeta
-    >
+    ctx: Context<{ id: number; userId: number; query?: any; filter?: any }, UserAuthMeta>,
   ) {
     const { id, query, filter, userId } = ctx.params;
-    const tenant: Tenant = await ctx.call("tenants.get", { id });
+    const tenant: Tenant = await ctx.call('tenants.get', { id });
     if (!tenant || !tenant.id) {
-      return throwNotFoundError("Tenant not found.");
+      return throwNotFoundError('Tenant not found.');
     }
 
     return ctx.call(
-      "users.get",
+      'users.get',
       {
         id: userId,
         query,
         filter,
-        populate: "role",
+        populate: 'role',
       },
       {
         meta: {
           profile: ctx.meta.profile || tenant,
         },
-      }
+      },
     );
   }
 
   @Action({
     params: {
       id: {
-        type: "number",
+        type: 'number',
         convert: true,
       },
     },
   })
   async findByUser(ctx: Context<{ id: number }>) {
-    const tenantUsers: TenantUser[] = await ctx.call("tenantUsers.find", {
+    const tenantUsers: TenantUser[] = await ctx.call('tenantUsers.find', {
       query: {
         user: ctx.params.id,
       },
-      populate: "tenant",
+      populate: 'tenant',
     });
 
     return tenantUsers.map((i) => ({
@@ -211,13 +206,13 @@ export default class TenantUsersService extends moleculer.Service {
   @Action({
     params: {
       id: {
-        type: "number",
+        type: 'number',
         convert: true,
       },
     },
   })
   async findIdsByUser(ctx: Context<{ id: number }>) {
-    const tenantUsers: TenantUser[] = await ctx.call("tenantUsers.find", {
+    const tenantUsers: TenantUser[] = await ctx.call('tenantUsers.find', {
       query: {
         user: ctx.params.id,
       },
@@ -229,11 +224,11 @@ export default class TenantUsersService extends moleculer.Service {
   @Action({
     params: {
       id: {
-        type: "number",
+        type: 'number',
         convert: true,
       },
       role: {
-        type: "string",
+        type: 'string',
         optional: true,
       },
     },
@@ -248,7 +243,7 @@ export default class TenantUsersService extends moleculer.Service {
       query.role = role;
     }
 
-    const tenantUsers: TenantUser[] = await ctx.call("tenantUsers.find", {
+    const tenantUsers: TenantUser[] = await ctx.call('tenantUsers.find', {
       query,
     });
 
@@ -258,17 +253,17 @@ export default class TenantUsersService extends moleculer.Service {
   @Action({
     params: {
       userId: {
-        type: "number",
+        type: 'number',
         convert: true,
       },
       tenantId: {
-        type: "number",
+        type: 'number',
         convert: true,
       },
     },
   })
   async userExistsInTenant(ctx: Context<{ userId: number; tenantId: number }>) {
-    const tenantUser: TenantUser = await ctx.call("tenantUsers.findOne", {
+    const tenantUser: TenantUser = await ctx.call('tenantUsers.findOne', {
       query: {
         tenant: ctx.params.tenantId,
         user: ctx.params.userId,
@@ -280,21 +275,21 @@ export default class TenantUsersService extends moleculer.Service {
 
   @Action({
     params: {
-      authGroup: "any",
+      authGroup: 'any',
       userId: {
-        type: "number",
+        type: 'number',
         convert: true,
       },
       companyEmail: {
-        type: "string",
+        type: 'string',
         optional: true,
       },
       companyPhone: {
-        type: "string",
+        type: 'string',
         optional: true,
       },
       companyName: {
-        type: "string",
+        type: 'string',
         optional: true,
       },
     },
@@ -306,14 +301,13 @@ export default class TenantUsersService extends moleculer.Service {
       companyEmail?: string;
       companyPhone?: string;
       companyName?: string;
-    }>
+    }>,
   ) {
-    const { authGroup, userId, companyEmail, companyPhone, companyName } =
-      ctx.params;
+    const { authGroup, userId, companyEmail, companyPhone, companyName } = ctx.params;
 
     if (!authGroup?.id) return;
 
-    const tenant: Tenant = await ctx.call("tenants.findOrCreate", {
+    const tenant: Tenant = await ctx.call('tenants.findOrCreate', {
       authGroup: authGroup,
       email: companyEmail,
       phone: companyPhone,
@@ -321,10 +315,10 @@ export default class TenantUsersService extends moleculer.Service {
     });
 
     if (!tenant || !tenant.id) {
-      throwUnauthorizedError("Cannot create or update tenant.");
+      throwUnauthorizedError('Cannot create or update tenant.');
     }
 
-    return ctx.call("tenantUsers.findOrCreate", {
+    return ctx.call('tenantUsers.findOrCreate', {
       authGroup: authGroup,
       tenant: tenant,
       userId: userId,
@@ -333,10 +327,10 @@ export default class TenantUsersService extends moleculer.Service {
 
   @Action({
     params: {
-      authGroup: "any",
-      tenant: "any",
+      authGroup: 'any',
+      tenant: 'any',
       userId: {
-        type: "number",
+        type: 'number',
         convert: true,
       },
     },
@@ -346,7 +340,7 @@ export default class TenantUsersService extends moleculer.Service {
       authGroup: any;
       tenant?: Tenant;
       userId?: string;
-    }>
+    }>,
   ) {
     const { authGroup, tenant, userId } = ctx.params;
     if (!authGroup || !authGroup.id) return;
@@ -356,21 +350,20 @@ export default class TenantUsersService extends moleculer.Service {
       user: userId,
     };
 
-    const tenantUser: TenantUser = await ctx.call("tenantUsers.findOne", {
+    const tenantUser: TenantUser = await ctx.call('tenantUsers.findOne', {
       query,
     });
 
-    if (tenantUser && !!authGroup?.role && authGroup.role === tenantUser.role)
-      return tenantUser;
+    if (tenantUser && !!authGroup?.role && authGroup.role === tenantUser.role) return tenantUser;
 
     if (tenantUser?.id) {
-      return ctx.call("tenantUsers.update", {
+      return ctx.call('tenantUsers.update', {
         id: tenantUser.id,
         role: authGroup.role || TenantUserRole.USER,
       });
     }
 
-    return ctx.call("tenantUsers.create", {
+    return ctx.call('tenantUsers.create', {
       ...query,
       role: authGroup.role || TenantUserRole.USER,
     });
@@ -379,33 +372,31 @@ export default class TenantUsersService extends moleculer.Service {
   @Action({
     params: {
       userId: {
-        type: "number",
+        type: 'number',
         convert: true,
       },
       tenantId: {
-        type: "number",
+        type: 'number',
         convert: true,
       },
     },
     types: [EndpointType.ADMIN, EndpointType.TENANT_ADMIN],
   })
-  async removeUser(
-    ctx: Context<{ userId: number; tenantId: number }, UserAuthMeta>
-  ) {
+  async removeUser(ctx: Context<{ userId: number; tenantId: number }, UserAuthMeta>) {
     const { tenantId, userId } = ctx.params;
     const { profile } = ctx.meta;
     if (profile?.id && Number(profile?.id) !== tenantId) {
       throw new moleculer.Errors.MoleculerClientError(
-        "Tenant is not accessable.",
+        'Tenant is not accessable.',
         401,
-        "UNAUTHORIZED"
+        'UNAUTHORIZED',
       );
     }
 
-    const user: User = await ctx.call("users.get", { id: userId });
-    const tenant: Tenant = await ctx.call("tenants.get", { id: tenantId });
+    const user: User = await ctx.call('users.get', { id: userId });
+    const tenant: Tenant = await ctx.call('tenants.get', { id: tenantId });
     if (!user || !tenant) {
-      return throwNotFoundError("User/Tenant not found.");
+      return throwNotFoundError('User/Tenant not found.');
     }
 
     await this.removeEntities(
@@ -416,10 +407,10 @@ export default class TenantUsersService extends moleculer.Service {
           user: user.id,
         },
       },
-      { meta: ctx.meta }
+      { meta: ctx.meta },
     );
 
-    await ctx.call("auth.users.unassignFromGroup", {
+    await ctx.call('auth.users.unassignFromGroup', {
       id: user.authUser,
       groupId: tenant.authGroup,
     });
@@ -430,7 +421,7 @@ export default class TenantUsersService extends moleculer.Service {
   @Action({
     params: {
       tenantId: {
-        type: "number",
+        type: 'number',
         convert: true,
       },
     },
@@ -440,31 +431,31 @@ export default class TenantUsersService extends moleculer.Service {
     const { profile } = ctx.meta;
     if (profile?.id && Number(profile?.id) !== tenantId) {
       throw new moleculer.Errors.MoleculerClientError(
-        "Tenant is not accessable.",
+        'Tenant is not accessable.',
         401,
-        "UNAUTHORIZED"
+        'UNAUTHORIZED',
       );
     }
 
-    const tenant: Tenant = await ctx.call("tenants.get", { id: tenantId });
+    const tenant: Tenant = await ctx.call('tenants.get', { id: tenantId });
     if (!tenant) {
-      return throwNotFoundError("Tenant not found.");
+      return throwNotFoundError('Tenant not found.');
     }
 
-    const tenantUsers: TenantUser[] = await ctx.call("tenantUsers.find", {
+    const tenantUsers: TenantUser[] = await ctx.call('tenantUsers.find', {
       query: {
         tenant: tenant.id,
       },
-      populate: "user",
+      populate: 'user',
     });
 
     await Promise.all(
       tenantUsers.map((tu) =>
-        ctx.call("auth.users.unassignFromGroup", {
+        ctx.call('auth.users.unassignFromGroup', {
           id: (tu.user as User).authUser,
           groupId: tenant.authGroup,
-        })
-      )
+        }),
+      ),
     );
 
     await this.removeEntities(
@@ -474,7 +465,7 @@ export default class TenantUsersService extends moleculer.Service {
           tenant: tenant.id,
         },
       },
-      { meta: ctx.meta }
+      { meta: ctx.meta },
     );
 
     return { success: true };
@@ -483,7 +474,7 @@ export default class TenantUsersService extends moleculer.Service {
   @Action({
     params: {
       userId: {
-        type: "number",
+        type: 'number',
         convert: true,
       },
     },
@@ -491,25 +482,25 @@ export default class TenantUsersService extends moleculer.Service {
   async removeTenants(ctx: Context<{ userId: number }, UserAuthMeta>) {
     const { userId } = ctx.params;
 
-    const user: User = await ctx.call("users.get", { id: userId });
+    const user: User = await ctx.call('users.get', { id: userId });
     if (!user) {
-      return throwNotFoundError("User not found.");
+      return throwNotFoundError('User not found.');
     }
 
-    const tenantUsers: TenantUser[] = await ctx.call("tenantUsers.find", {
+    const tenantUsers: TenantUser[] = await ctx.call('tenantUsers.find', {
       query: {
         user: user.id,
       },
-      populate: "tenant",
+      populate: 'tenant',
     });
 
     await Promise.all(
       tenantUsers.map((tu) =>
-        ctx.call("auth.users.unassignFromGroup", {
+        ctx.call('auth.users.unassignFromGroup', {
           id: user.authUser,
           groupId: (tu.tenant as Tenant).authGroup,
-        })
-      )
+        }),
+      ),
     );
 
     await this.removeEntities(
@@ -519,7 +510,7 @@ export default class TenantUsersService extends moleculer.Service {
           user: user.id,
         },
       },
-      { meta: ctx.meta }
+      { meta: ctx.meta },
     );
 
     return { success: true };
@@ -528,44 +519,38 @@ export default class TenantUsersService extends moleculer.Service {
   @Action({
     params: {
       userId: {
-        type: "number",
+        type: 'number',
         convert: true,
       },
       tenantId: {
-        type: "number",
+        type: 'number',
         convert: true,
       },
-      role: "string",
+      role: 'string',
     },
     types: [EndpointType.ADMIN, EndpointType.TENANT_ADMIN],
   })
-  async updateUser(
-    ctx: Context<
-      { userId: number; tenantId: number; role: string },
-      UserAuthMeta
-    >
-  ) {
+  async updateUser(ctx: Context<{ userId: number; tenantId: number; role: string }, UserAuthMeta>) {
     const { profile } = ctx.meta;
     const { userId, tenantId, role } = ctx.params;
     if (
       profile?.id &&
-      (Number(profile?.id) !== tenantId ||
-        profile?.role !== TenantUserRole.ADMIN)
+      (Number(profile?.id) !== tenantId || profile?.role !== TenantUserRole.ADMIN)
     ) {
       throw new moleculer.Errors.MoleculerClientError(
-        "Tenant is not accessable.",
+        'Tenant is not accessable.',
         401,
-        "UNAUTHORIZED"
+        'UNAUTHORIZED',
       );
     }
 
-    const user: User = await ctx.call("users.get", { id: userId });
-    const tenant: Tenant = await ctx.call("tenants.get", { id: tenantId });
+    const user: User = await ctx.call('users.get', { id: userId });
+    const tenant: Tenant = await ctx.call('tenants.get', { id: tenantId });
     if (!user || !tenant) {
-      return throwNotFoundError("User/Tenant not found.");
+      return throwNotFoundError('User/Tenant not found.');
     }
 
-    const tenantUser: TenantUser = await ctx.call("tenantUsers.findOne", {
+    const tenantUser: TenantUser = await ctx.call('tenantUsers.findOne', {
       query: {
         tenant: tenant.id,
         user: user.id,
@@ -573,16 +558,16 @@ export default class TenantUsersService extends moleculer.Service {
     });
 
     if (!tenantUser || !tenantUser.id) {
-      return throwNotFoundError("Tenant user not found.");
+      return throwNotFoundError('Tenant user not found.');
     }
 
-    await ctx.call("auth.users.assignToGroup", {
+    await ctx.call('auth.users.assignToGroup', {
       id: user.authUser,
       groupId: tenant.authGroup,
       role,
     });
 
-    await ctx.call("tenantUsers.update", {
+    await ctx.call('tenantUsers.update', {
       id: tenantUser.id,
       role,
     });
@@ -593,44 +578,38 @@ export default class TenantUsersService extends moleculer.Service {
   @Action({
     params: {
       userId: {
-        type: "number",
+        type: 'number',
         convert: true,
       },
       tenantId: {
-        type: "number",
+        type: 'number',
         convert: true,
       },
       role: {
-        type: "string",
+        type: 'string',
         optional: true,
         default: TenantUserRole.USER,
       },
     },
     types: [EndpointType.ADMIN, EndpointType.TENANT_ADMIN],
   })
-  async addUser(
-    ctx: Context<
-      { userId: number; tenantId: number; role: string },
-      UserAuthMeta
-    >
-  ) {
+  async addUser(ctx: Context<{ userId: number; tenantId: number; role: string }, UserAuthMeta>) {
     const { profile } = ctx.meta;
     const { userId, tenantId, role } = ctx.params;
     if (
       profile?.id &&
-      (Number(profile?.id) !== tenantId ||
-        profile?.role !== TenantUserRole.ADMIN)
+      (Number(profile?.id) !== tenantId || profile?.role !== TenantUserRole.ADMIN)
     ) {
-      return throwUnauthorizedError("Tenant is not accessable.");
+      return throwUnauthorizedError('Tenant is not accessable.');
     }
 
-    const user: User = await ctx.call("users.get", { id: userId });
-    const tenant: Tenant = await ctx.call("tenants.get", { id: tenantId });
+    const user: User = await ctx.call('users.get', { id: userId });
+    const tenant: Tenant = await ctx.call('tenants.get', { id: tenantId });
     if (!user || !tenant) {
-      return throwNotFoundError("User/Tenant not found.");
+      return throwNotFoundError('User/Tenant not found.');
     }
 
-    const tenantUser: TenantUser = await ctx.call("tenantUsers.findOne", {
+    const tenantUser: TenantUser = await ctx.call('tenantUsers.findOne', {
       query: {
         tenant: tenant.id,
         user: user.id,
@@ -639,19 +618,19 @@ export default class TenantUsersService extends moleculer.Service {
 
     if (tenantUser?.id) {
       throw new moleculer.Errors.MoleculerClientError(
-        "Tenant user already exists.",
+        'Tenant user already exists.',
         400,
-        "BAD_REQUEST"
+        'BAD_REQUEST',
       );
     }
 
-    await ctx.call("auth.users.assignToGroup", {
+    await ctx.call('auth.users.assignToGroup', {
       id: user.authUser,
       groupId: tenant.authGroup,
       role,
     });
 
-    await ctx.call("tenantUsers.create", {
+    await ctx.call('tenantUsers.create', {
       tenant: tenant.id,
       user: user.id,
       role,
@@ -663,25 +642,25 @@ export default class TenantUsersService extends moleculer.Service {
   @Action({
     params: {
       id: {
-        type: "number",
+        type: 'number',
         convert: true,
       },
       profile: {
-        type: "number",
+        type: 'number',
         convert: true,
       },
     },
     cache: {
-      keys: ["id", "profile"],
+      keys: ['id', 'profile'],
     },
   })
   async getProfile(ctx: Context<{ id: number; profile: number }>) {
-    const tenantUser: TenantUser = await ctx.call("tenantUsers.findOne", {
+    const tenantUser: TenantUser = await ctx.call('tenantUsers.findOne', {
       query: {
         tenant: ctx.params.profile,
         user: ctx.params.id,
       },
-      populate: "tenant",
+      populate: 'tenant',
     });
 
     if (!tenantUser || !tenantUser.id) {
@@ -698,34 +677,34 @@ export default class TenantUsersService extends moleculer.Service {
 
   @Action({
     cache: {
-      keys: ["#user.id"],
+      keys: ['#user.id'],
     },
   })
   async getProfiles(ctx: Context<{}, UserAuthMeta>) {
     const { user } = ctx.meta;
     if (!user?.id || user?.type === UserType.ADMIN) return [];
 
-    const tenants: Tenant[] = await ctx.call("tenantUsers.findByUser", {
+    const tenants: Tenant[] = await ctx.call('tenantUsers.findByUser', {
       id: user.id,
-      fields: ["id", "name", "role"],
+      fields: ['id', 'name', 'role'],
     });
 
     return tenants;
   }
 
   @Event()
-  async "tenantUsers.**"() {
+  async 'tenantUsers.**'() {
     this.broker.emit(`cache.clean.${this.fullName}`);
-    this.broker.emit("cache.clean.auth");
+    this.broker.emit('cache.clean.auth');
   }
 
   @Event()
-  async "cache.clean.users"() {
+  async 'cache.clean.users'() {
     this.broker.emit(`cache.clean.${this.fullName}`);
   }
 
   @Event()
-  async "cache.clean.tenantUsers"() {
+  async 'cache.clean.tenantUsers'() {
     await this.broker.cacher?.clean(`${this.fullName}.**`);
   }
 }

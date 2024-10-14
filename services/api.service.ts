@@ -16,6 +16,7 @@ export interface UserAuthMeta {
   app: any;
   authToken: string;
   authUser: any;
+  tenant?: Tenant;
 }
 
 export interface TenantAuthMeta {
@@ -102,8 +103,12 @@ function verifyApiKey(
           'forms.importExternalForms',
           'forms.updateExternalForm',
           'forms.deleteExternalForm',
+          'forms.getExternalForms',
+          'forms.getExternalForm',
         ],
         aliases: {
+          'GET /external/list': 'forms.getExternalForms',
+          'GET /external/:externalId': 'forms.getExternalForm',
           'POST /external': 'forms.createExternalForm',
           'POST /external/import': 'forms.importExternalForms',
           'PATCH /external/:externalId': 'forms.updateExternalForm',
