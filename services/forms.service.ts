@@ -957,8 +957,6 @@ export default class FormsService extends moleculer.Service {
     // check if the form creation is either via an API or performed by a super admin
     const isCreatedByApiOrSuperAdmin = !user?.id || authUser?.type === UserType.SUPER_ADMIN;
 
-    throwNotFoundError(JSON.stringify({ authUser, test: 'test', user }));
-
     if (!form?.id || form?.status === FormStatus.REJECTED) {
       return invalid;
     }
