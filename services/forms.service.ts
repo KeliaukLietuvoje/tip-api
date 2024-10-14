@@ -964,7 +964,6 @@ export default class FormsService extends moleculer.Service {
       return invalid;
     }
 
-    const tenant = form.tenant || form.tenantId;
     const isSuperAdmin = authUser?.type === UserType.SUPER_ADMIN;
     const isCreatedByApiOrSuperAdmin = !user?.id || isSuperAdmin;
 
@@ -974,14 +973,16 @@ export default class FormsService extends moleculer.Service {
       return { edit: true, validate: canValidate };
     }
 
+    const tenant = form.tenant || form.tenantId;
     const isCreatedByUser = !tenant && user && user.id === form.createdBy;
     const isCreatedByTenant = profile?.id === tenant;
-    const isAdmin = user?.type === UserType.ADMIN;
 
     if (isCreatedByUser || isCreatedByTenant) {
       const canEdit = [FormStatus.RETURNED, FormStatus.APPROVED].includes(form.status);
       return { edit: canEdit, validate: false };
     }
+
+    const isAdmin = user?.type === UserType.ADMIN;
 
     if (isAdmin) {
       const canEdit = form.status === FormStatus.APPROVED;
