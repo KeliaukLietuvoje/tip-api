@@ -619,6 +619,7 @@ export default class FormsService extends moleculer.Service {
     const forms = params.forms;
     const meta = ctx.meta as any;
     const tenant = meta.tenant;
+    ctx.meta.profile = { id: tenant.id };
     ctx.meta.autoApprove = true;
 
     const uniqueForms = new Set(forms.map((v) => v.externalId));
