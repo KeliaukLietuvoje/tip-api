@@ -537,9 +537,10 @@ export default class FormsService extends moleculer.Service {
         convert: true,
       },
       nameLT: 'string',
-      isActive: {
-        type: 'boolean',
-        default: true,
+      status: {
+        type: 'string',
+        enum: Object.values(FormStatus),
+        default: FormStatus.APPROVED,
       },
     },
   })
@@ -548,7 +549,11 @@ export default class FormsService extends moleculer.Service {
     const meta = ctx.meta as any;
     const tenant = meta.tenant;
     ctx.meta.profile = { id: tenant.id };
-    ctx.meta.autoApprove = true;
+
+    if (ctx.params.status === FormStatus.APPROVED) {
+      ctx.meta.autoApprove = true;
+      ctx.params.isActive = true;
+    }
 
     const form = await ctx.call('forms.findOne', {
       query: { externalId: params.externalId, tenant: tenant.id },
@@ -605,9 +610,10 @@ export default class FormsService extends moleculer.Service {
               convert: true,
             },
             nameLT: 'string',
-            isActive: {
-              type: 'boolean',
-              default: true,
+            status: {
+              type: 'string',
+              enum: Object.values(FormStatus),
+              default: FormStatus.APPROVED,
             },
           },
         },
@@ -620,7 +626,6 @@ export default class FormsService extends moleculer.Service {
     const meta = ctx.meta as any;
     const tenant = meta.tenant;
     ctx.meta.profile = { id: tenant.id };
-    ctx.meta.autoApprove = true;
 
     const uniqueForms = new Set(forms.map((v) => v.externalId));
 
@@ -646,6 +651,11 @@ export default class FormsService extends moleculer.Service {
       const formToUpdate: Form = await ctx.call('forms.findOne', {
         query: { externalId: form.externalId, tenant: tenant.id },
       });
+
+      if (form.status === FormStatus.APPROVED) {
+        ctx.meta.autoApprove = true;
+        form.isActive = true;
+      }
 
       if (formToUpdate) {
         await ctx.call('forms.update', {
@@ -905,7 +915,7 @@ export default class FormsService extends moleculer.Service {
 
   @Method
   validateStatus({ ctx, value, entity }: FieldHookCallback) {
-    const { user, profile } = ctx.meta;
+    const { user, profile, authUser } = ctx.meta;
     if (!value || !user?.id) return true;
 
     const isAdmin = user.type === UserType.ADMIN;
@@ -919,7 +929,7 @@ export default class FormsService extends moleculer.Service {
       return newStatuses.includes(value) || error;
     }
 
-    const editingPermissions = this.hasPermissionToEdit(entity, user, profile);
+    const editingPermissions = this.hasPermissionToEdit(entity, user, authUser, profile);
 
     if (editingPermissions.edit) {
       return isAdmin ? value === FormStatus.APPROVED : value === FormStatus.SUBMITTED || error;
@@ -934,6 +944,7 @@ export default class FormsService extends moleculer.Service {
   hasPermissionToEdit(
     form: any,
     user?: User,
+    authUser?: User,
     profile?: Tenant,
   ): {
     edit: boolean;
@@ -943,17 +954,17 @@ export default class FormsService extends moleculer.Service {
 
     const tenant = form.tenant || form.tenantId;
 
-    // form uploaded via api
-    const isApiUpload = !user?.id;
+    // check if the form creation is either via an API or performed by a super admin
+    const isCreatedByApiOrSuperAdmin = !user?.id || authUser.type === UserType.SUPER_ADMIN;
 
-    if (!form?.id || [FormStatus.REJECTED].includes(form?.status)) {
+    if (!form?.id || form?.status === FormStatus.REJECTED) {
       return invalid;
     }
 
-    if (isApiUpload) {
+    if (isCreatedByApiOrSuperAdmin) {
       return {
         edit: true,
-        validate: true,
+        validate: authUser.type === UserType.SUPER_ADMIN,
       };
     }
 
