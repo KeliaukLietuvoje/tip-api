@@ -337,10 +337,10 @@ function isUrlValid({ value }: FieldHookCallback) {
           value,
           entity,
         }: FieldHookCallback & ContextMeta<FormStatusChanged>) {
-          const { user } = ctx?.meta;
+          const { user, authUser } = ctx?.meta;
 
           if (!ctx?.meta?.statusChanged || entity?.status === FormStatus.APPROVED) return;
-          else if (!user?.id) return value;
+          else if (!user?.id || authUser.type === UserType.SUPER_ADMIN) return value;
 
           return value || FormStatus.SUBMITTED;
         },
