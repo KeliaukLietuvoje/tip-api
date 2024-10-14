@@ -537,6 +537,11 @@ export default class FormsService extends moleculer.Service {
         convert: true,
       },
       nameLT: 'string',
+      status: {
+        type: 'string',
+        enum: Object.values(FormStatus),
+        default: FormStatus.APPROVED,
+      },
     },
   })
   async createExternalForm(ctx: Context<ApiForm, any>) {
@@ -544,8 +549,11 @@ export default class FormsService extends moleculer.Service {
     const meta = ctx.meta as any;
     const tenant = meta.tenant;
     ctx.meta.profile = { id: tenant.id };
-    ctx.meta.autoApprove = true;
-    ctx.params.isActive = true;
+
+    const isApproved = params.status === FormStatus.APPROVED;
+
+    ctx.meta.autoApprove = isApproved;
+    ctx.params.isActive = isApproved;
 
     const form = await ctx.call('forms.findOne', {
       query: { externalId: params.externalId, tenant: tenant.id },
@@ -586,6 +594,70 @@ export default class FormsService extends moleculer.Service {
       id: form.id,
       ...formFields,
     });
+
+    return { success: true };
+  }
+
+  @Action({
+    params: {
+      forms: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            externalId: {
+              type: 'string',
+              convert: true,
+            },
+            nameLT: 'string',
+          },
+        },
+      },
+    },
+  })
+  async importExternalForms(ctx: Context<{ forms: ApiForm[] }, any>) {
+    const params = ctx.params;
+    const forms = params.forms;
+    const meta = ctx.meta as any;
+    const tenant = meta.tenant;
+
+    const uniqueForms = new Set(forms.map((v) => v.externalId));
+
+    if (uniqueForms.size < forms.length) {
+      throwAlreadyExistError('Forms have duplicate externalIds');
+    }
+
+    const validForms = await Promise.all(
+      params.forms.map(async (form: ApiForm, index: number) => {
+        const formPrefix = `Form ${index}.`;
+
+        return await this.validateExternalFormFields(ctx, form, tenant, formPrefix);
+      }),
+    );
+    const adapter = await this.getAdapter(ctx);
+
+    await adapter.removeMany({
+      tenantId: tenant.id,
+      externalId: { $exists: false },
+    });
+
+    for (const form of validForms) {
+      const formToUpdate: Form = await ctx.call('forms.findOne', {
+        query: { externalId: form.externalId, tenant: tenant.id },
+      });
+      const isApproved = form.status === FormStatus.APPROVED;
+      ctx.meta.autoApprove = isApproved;
+      form.isActive = isApproved;
+
+      if (formToUpdate) {
+        await ctx.call('forms.update', {
+          id: formToUpdate.id,
+          ...form,
+        });
+      } else {
+        await ctx.call('forms.create', form);
+      }
+    }
 
     return { success: true };
   }
@@ -643,69 +715,6 @@ export default class FormsService extends moleculer.Service {
     });
 
     return form;
-  }
-
-  @Action({
-    params: {
-      forms: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            externalId: {
-              type: 'string',
-              convert: true,
-            },
-            nameLT: 'string',
-          },
-        },
-      },
-    },
-  })
-  async importExternalForms(ctx: Context<{ forms: ApiForm[] }, any>) {
-    const params = ctx.params;
-    const forms = params.forms;
-    const meta = ctx.meta as any;
-    const tenant = meta.tenant;
-    ctx.meta.profile = { id: tenant.id };
-    ctx.meta.autoApprove = true;
-
-    const uniqueForms = new Set(forms.map((v) => v.externalId));
-
-    if (uniqueForms.size < forms.length) {
-      throwAlreadyExistError('Forms have duplicate externalIds');
-    }
-
-    const validForms = await Promise.all(
-      params.forms.map(async (form: ApiForm, index: number) => {
-        const formPrefix = `Form ${index}.`;
-
-        return await this.validateExternalFormFields(ctx, form, tenant, formPrefix);
-      }),
-    );
-    const adapter = await this.getAdapter(ctx);
-
-    await adapter.removeMany({
-      tenantId: tenant.id,
-      externalId: { $exists: false },
-    });
-
-    for (const form of validForms) {
-      const formToUpdate: Form = await ctx.call('forms.findOne', {
-        query: { externalId: form.externalId, tenant: tenant.id },
-      });
-
-      if (formToUpdate) {
-        await ctx.call('forms.update', {
-          id: formToUpdate.id,
-          ...form,
-        });
-      } else {
-        await ctx.call('forms.create', form);
-      }
-    }
-
-    return { success: true };
   }
 
   @Method
