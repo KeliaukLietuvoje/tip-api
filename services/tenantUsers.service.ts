@@ -650,9 +650,9 @@ export default class TenantUsersService extends moleculer.Service {
         convert: true,
       },
     },
-    // cache: {
-    //   keys: ["id", "profile"],
-    // },
+    cache: {
+      keys: ['id', 'profile'],
+    },
   })
   async getProfile(ctx: Context<{ id: number; profile: number }>) {
     const tenantUser: TenantUser = await ctx.call('tenantUsers.findOne', {
@@ -676,9 +676,9 @@ export default class TenantUsersService extends moleculer.Service {
   }
 
   @Action({
-    // cache: {
-    //   keys: ["#user.id"],
-    // },
+    cache: {
+      keys: ['#user.id'],
+    },
   })
   async getProfiles(ctx: Context<{}, UserAuthMeta>) {
     const { user } = ctx.meta;

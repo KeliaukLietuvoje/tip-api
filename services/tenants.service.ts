@@ -386,9 +386,9 @@ export default class TenantsService extends moleculer.Service {
     params: {
       key: 'string',
     },
-    // cache: {
-    //   keys: ['key'],
-    // },
+    cache: {
+      keys: ['key'],
+    },
   })
   async verifyKey(ctx: Context<{ key: string }>) {
     const { key } = ctx.params;

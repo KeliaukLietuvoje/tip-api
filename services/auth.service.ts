@@ -18,14 +18,14 @@ import { User, UserType } from './users.service';
   ],
   actions: {
     'users.resolveToken': {
-      // cache: {
-      //   keys: ['#authToken'],
-      // },
+      cache: {
+        keys: ['#authToken'],
+      },
     },
     'apps.resolveToken': {
-      // cache: {
-      //   keys: [],
-      // },
+      cache: {
+        keys: [],
+      },
     },
   },
   hooks: {
@@ -41,9 +41,9 @@ import { User, UserType } from './users.service';
 })
 export default class AuthService extends moleculer.Service {
   @Action({
-    // cache: {
-    //   keys: ['#user.id', '#profile.id'],
-    // },
+    cache: {
+      keys: ['#user.id', '#profile.id'],
+    },
   })
   async me(ctx: Context<{}, UserAuthMeta>) {
     const { user, authUser } = ctx.meta;
@@ -63,7 +63,7 @@ export default class AuthService extends moleculer.Service {
       };
     }
 
-    return { ...data, authUser, test: 'test' };
+    return data;
   }
 
   @Action({
@@ -94,9 +94,9 @@ export default class AuthService extends moleculer.Service {
   }
 
   @Action({
-    // cache: {
-    //   keys: ['types', '#user.id', '#profile.id'],
-    // },
+    cache: {
+      keys: ['types', '#user.id', '#profile.id'],
+    },
     params: {
       types: {
         type: 'array',
