@@ -22,7 +22,7 @@ import {
   throwAlreadyExistError,
   throwBadRequestError,
   throwNotFoundError,
-  throwValidationError
+  throwValidationError,
 } from '../types';
 import { toReadableStream } from '../utils';
 import { emailCanBeSent } from '../utils/mails';
@@ -201,6 +201,7 @@ function isUrlValid({ value }: FieldHookCallback) {
   mixins: [
     DbConnection({
       collection: 'forms',
+      entityChangedOldEntity: true,
     }),
     PostgisMixin({
       srid: LKS_SRID,
@@ -1080,7 +1081,10 @@ export default class FormsService extends moleculer.Service {
   async 'forms.updated'(ctx: Context<EntityChangedParams<Form>>) {
     const { oldData: prevForm, data: form } = ctx.params;
 
-    if (prevForm?.status !== form?.status) {
+    if (prevForm?.status === FormStatus.APPROVED) {
+      await this.createFormHistory(ctx, form.id, FormHistoryTypes.UPDATED);
+      await this.refreshObjects(ctx);
+    } else if (prevForm?.status !== form?.status) {
       const { comment } = ctx.options?.parentCtx?.params as any;
       const typesByStatus = {
         [FormStatus.SUBMITTED]: FormHistoryTypes.UPDATED,
