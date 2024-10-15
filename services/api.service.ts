@@ -261,7 +261,6 @@ export default class ApiService extends moleculer.Service {
     }
     if (actionAuthType === EndpointType.API) {
       const apiKey = req.headers['x-api-key'];
-      console.log('wou me?');
       return this.verifyApiKey(ctx, apiKey as string);
     }
 
@@ -339,8 +338,6 @@ export default class ApiService extends moleculer.Service {
     if (actionAuthType === EndpointType.PUBLIC) {
       return Promise.resolve(ctx);
     }
-
-    console.log('wou?');
 
     if (actionAuthType === EndpointType.API && !!tenant) {
       return Promise.resolve(ctx);
