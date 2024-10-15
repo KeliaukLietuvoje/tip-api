@@ -542,7 +542,7 @@ export default class FormsService extends moleculer.Service {
       nameLT: 'string',
       status: {
         type: 'string',
-        enum: Object.values(FormStatus),
+        enum: [FormStatus.CREATED, FormStatus.APPROVED],
         default: FormStatus.APPROVED,
       },
     },
@@ -619,7 +619,7 @@ export default class FormsService extends moleculer.Service {
             nameLT: 'string',
             status: {
               type: 'string',
-              enum: Object.values(FormStatus),
+              enum: [FormStatus.CREATED, FormStatus.APPROVED],
               default: FormStatus.APPROVED,
             },
           },
