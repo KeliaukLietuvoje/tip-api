@@ -252,7 +252,7 @@ export default class ApiService extends moleculer.Service {
 
       if (tenant && tenant?.id) {
         ctx.meta.tenant = tenant;
-        return Promise.resolve(tenant);
+        return Promise.resolve(null);
       }
 
       return this.rejectAuth(ctx, throwUnauthorizedError('INVALID API TOKEN'));
