@@ -231,25 +231,6 @@ export default class ApiService extends moleculer.Service {
   }
 
   @Method
-  async verifyApiKey(
-    ctx: Context<Record<string, unknown>, UserAuthMeta>,
-    apiKey: string,
-  ): Promise<unknown> {
-    if (!apiKey) return this.rejectAuth(ctx, throwUnauthorizedError('NO API TOKEN'));
-
-    const tenant: Tenant = await ctx.call('tenants.verifyKey', {
-      key: apiKey,
-    });
-
-    if (tenant && tenant?.id) {
-      ctx.meta.tenant = tenant;
-      return Promise.resolve(ctx);
-    }
-
-    return this.rejectAuth(ctx, throwUnauthorizedError('INVALID API TOKEN'));
-  }
-
-  @Method
   async authenticate(
     ctx: Context<Record<string, unknown>, UserAuthMeta>,
     route: any,
@@ -259,9 +240,22 @@ export default class ApiService extends moleculer.Service {
     if (actionAuthType === EndpointType.PUBLIC) {
       return Promise.resolve(null);
     }
+
     if (actionAuthType === EndpointType.API) {
       const apiKey = req.headers['x-api-key'];
-      return this.verifyApiKey(ctx, apiKey as string);
+
+      if (!apiKey) return this.rejectAuth(ctx, throwUnauthorizedError('NO API TOKEN'));
+
+      const tenant: Tenant = await ctx.call('tenants.verifyKey', {
+        key: apiKey,
+      });
+
+      if (tenant && tenant?.id) {
+        ctx.meta.tenant = tenant;
+        return Promise.resolve(tenant);
+      }
+
+      return this.rejectAuth(ctx, throwUnauthorizedError('INVALID API TOKEN'));
     }
 
     const auth = req.headers.authorization;
