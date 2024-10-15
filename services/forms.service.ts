@@ -338,7 +338,7 @@ function isUrlValid({ value }: FieldHookCallback) {
           value,
           entity,
         }: FieldHookCallback & ContextMeta<FormStatusChanged>) {
-          const { user, authUser } = ctx?.meta;
+          const { user } = ctx?.meta;
 
           if (!ctx?.meta?.statusChanged || entity?.status === FormStatus.APPROVED) return;
           else if (!user?.id) return value;
@@ -706,7 +706,7 @@ export default class FormsService extends moleculer.Service {
   @Action({ rest: 'GET /external', auth: EndpointType.API })
   async getExternalForms(ctx: Context<any, UserAuthMeta>) {
     const tenant = ctx.meta?.tenant;
-    const params = ctx?.params;
+    const params = ctx?.params || {};
     const forms: Form = await ctx.call('forms.list', {
       ...params,
       query: { ...(params?.query || {}), tenant: tenant.id },
@@ -723,13 +723,13 @@ export default class FormsService extends moleculer.Service {
       convert: true,
     },
   })
-  async getExternalForm(ctx: Context<{ externalId: number }, UserAuthMeta>) {
-    const params = ctx.params;
+  async getExternalForm(ctx: Context<any, UserAuthMeta>) {
+    const params = ctx.params || {};
     const tenant = ctx.meta?.tenant;
 
     const form: Form = await ctx.call('forms.findOne', {
-      query: { externalId: params.externalId, tenant: tenant.id },
-      populate: 'visitInfo,additionalInfos,subCategories,categories,geom',
+      ...params,
+      query: { externalId: params?.externalId, tenant: tenant.id },
     });
 
     return form;
