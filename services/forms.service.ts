@@ -916,7 +916,7 @@ export default class FormsService extends moleculer.Service {
   validateStatus({ ctx, value, entity }: FieldHookCallback) {
     const { user, profile, authUser } = ctx.meta;
 
-    if (!value || !user?.id) return true;
+    if (!value) return true;
 
     const isAdmin = user.type === UserType.ADMIN;
     const isSuperAdmin = authUser.type === UserType.SUPER_ADMIN;
