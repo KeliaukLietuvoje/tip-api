@@ -551,10 +551,9 @@ export default class FormsService extends moleculer.Service {
     const tenant = meta.tenant;
     ctx.meta.profile = { id: tenant.id };
 
-    if (ctx.params.status === FormStatus.APPROVED) {
-      ctx.meta.autoApprove = true;
-      ctx.params.isActive = true;
-    }
+    const isApproved = ctx.params.status === FormStatus.APPROVED;
+    ctx.meta.autoApprove = isApproved;
+    ctx.params.isActive = isApproved;
 
     const form = await ctx.call('forms.findOne', {
       query: { externalId: params.externalId, tenant: tenant.id },
@@ -653,10 +652,9 @@ export default class FormsService extends moleculer.Service {
         query: { externalId: form.externalId, tenant: tenant.id },
       });
 
-      if (form.status === FormStatus.APPROVED) {
-        ctx.meta.autoApprove = true;
-        form.isActive = true;
-      }
+      const isApproved = form.status === FormStatus.APPROVED;
+      ctx.meta.autoApprove = isApproved;
+      form.isActive = isApproved;
 
       if (formToUpdate) {
         await ctx.call('forms.update', {
@@ -930,7 +928,7 @@ export default class FormsService extends moleculer.Service {
     const error = `Cannot set status with value ${value}`;
 
     if (!entity?.id) {
-      return newStatuses.includes(value) ? true : error;
+      return newStatuses.includes(value) || error;
     }
 
     const { edit, validate } = this.hasPermissionToEdit(entity, user, authUser, profile);
@@ -967,6 +965,10 @@ export default class FormsService extends moleculer.Service {
 
     const isSuperAdmin = authUser?.type === UserType.SUPER_ADMIN;
     const isCreatedByApiOrSuperAdmin = !user?.id || isSuperAdmin;
+    const tenant = form.tenant || form.tenantId;
+    const isCreatedByUser = !tenant && user && user.id === form.createdBy;
+    const isCreatedByTenant = profile?.id === tenant;
+    const isAdmin = user?.type === UserType.ADMIN;
 
     if (isCreatedByApiOrSuperAdmin) {
       const canValidate =
@@ -974,16 +976,10 @@ export default class FormsService extends moleculer.Service {
       return { edit: true, validate: canValidate };
     }
 
-    const tenant = form.tenant || form.tenantId;
-    const isCreatedByUser = !tenant && user && user.id === form.createdBy;
-    const isCreatedByTenant = profile?.id === tenant;
-
     if (isCreatedByUser || isCreatedByTenant) {
       const canEdit = [FormStatus.RETURNED, FormStatus.APPROVED].includes(form.status);
       return { edit: canEdit, validate: false };
     }
-
-    const isAdmin = user?.type === UserType.ADMIN;
 
     if (isAdmin) {
       const canEdit = form.status === FormStatus.APPROVED;
