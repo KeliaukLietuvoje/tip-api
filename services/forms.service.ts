@@ -132,8 +132,8 @@ const populatePermissions = (field: string) => {
 async function validateCategories({ value, ctx, params, entity }: FieldHookCallback) {
   if (!value) return;
 
-  const subcategories = params.subCategories || entity.subCategories;
-  const hasSubcategories = subcategories && subcategories.length;
+  const subcategories = params?.subCategories || entity?.subCategories;
+  const hasSubcategories = subcategories && subcategories?.length;
 
   const dbCategories: Category[] = await ctx.call('categories.find', {
     query: { ...(hasSubcategories && { parent: { $exists: false } }), id: { $in: value } },
