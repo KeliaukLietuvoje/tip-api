@@ -532,6 +532,8 @@ export default class FormsService extends moleculer.Service {
   }
 
   @Action({
+    rest: 'POST /external',
+    auth: EndpointType.API,
     params: {
       externalId: {
         type: 'string',
@@ -563,12 +565,15 @@ export default class FormsService extends moleculer.Service {
       throwAlreadyExistError('Form already exists');
     }
     const formFields = await this.validateExternalFormFields(ctx, params, tenant);
+
     await ctx.call('forms.create', formFields);
 
     return { success: true };
   }
 
   @Action({
+    rest: 'PATCH /external/:externalId',
+    auth: EndpointType.API,
     params: {
       externalId: {
         type: 'string',
@@ -599,6 +604,8 @@ export default class FormsService extends moleculer.Service {
   }
 
   @Action({
+    rest: 'POST /external/import',
+    auth: EndpointType.API,
     params: {
       forms: {
         type: 'array',
@@ -670,6 +677,8 @@ export default class FormsService extends moleculer.Service {
   }
 
   @Action({
+    rest: 'DELETE /external/:externalId',
+    auth: EndpointType.API,
     externalId: {
       type: 'string',
       convert: true,
@@ -694,7 +703,7 @@ export default class FormsService extends moleculer.Service {
     return { success: true };
   }
 
-  @Action()
+  @Action({ rest: 'GET /external', auth: EndpointType.API })
   async getExternalForms(ctx: Context<any, UserAuthMeta>) {
     const tenant = ctx.meta?.tenant;
     const params = ctx?.params;
@@ -707,6 +716,8 @@ export default class FormsService extends moleculer.Service {
   }
 
   @Action({
+    rest: 'GET /external/:externalId',
+    auth: EndpointType.API,
     externalId: {
       type: 'string',
       convert: true,
@@ -918,8 +929,8 @@ export default class FormsService extends moleculer.Service {
 
     if (!value) return true;
 
-    const isAdmin = user.type === UserType.ADMIN;
-    const isSuperAdmin = authUser.type === UserType.SUPER_ADMIN;
+    const isAdmin = user?.type === UserType.ADMIN;
+    const isSuperAdmin = authUser?.type === UserType.SUPER_ADMIN;
 
     const adminStatuses = [FormStatus.REJECTED, FormStatus.RETURNED, FormStatus.APPROVED];
 

@@ -23,15 +23,6 @@ export interface TenantAuthMeta {
   tenant: Tenant;
 }
 
-function verifyApiKey(
-  ctx: Context<Record<string, unknown>, TenantAuthMeta>,
-  route: any,
-  req: RequestMessage,
-): Promise<unknown> {
-  const apiKey = req.headers['x-api-key'];
-  return this.verifyApiKey(ctx, apiKey);
-}
-
 @Service({
   name: 'api',
   mixins: [ApiGateway],
@@ -93,28 +84,6 @@ function verifyApiKey(
           'POST /evartai/login': 'auth.evartai.login',
           'POST /refresh': 'auth.refreshToken',
         },
-      },
-      {
-        path: '/forms',
-        authorization: false,
-        authentication: false,
-        whitelist: [
-          'forms.createExternalForm',
-          'forms.importExternalForms',
-          'forms.updateExternalForm',
-          'forms.deleteExternalForm',
-          'forms.getExternalForms',
-          'forms.getExternalForm',
-        ],
-        aliases: {
-          'GET /external/list': 'forms.getExternalForms',
-          'GET /external/:externalId': 'forms.getExternalForm',
-          'POST /external': 'forms.createExternalForm',
-          'POST /external/import': 'forms.importExternalForms',
-          'PATCH /external/:externalId': 'forms.updateExternalForm',
-          'DELETE /external/:externalId': 'forms.deleteExternalForm',
-        },
-        onBeforeCall: verifyApiKey,
       },
       {
         path: '',
@@ -263,7 +232,7 @@ export default class ApiService extends moleculer.Service {
 
   @Method
   async verifyApiKey(
-    ctx: Context<Record<string, unknown>, TenantAuthMeta>,
+    ctx: Context<Record<string, unknown>, UserAuthMeta>,
     apiKey: string,
   ): Promise<unknown> {
     if (!apiKey) return this.rejectAuth(ctx, throwUnauthorizedError('NO API TOKEN'));
@@ -274,7 +243,6 @@ export default class ApiService extends moleculer.Service {
 
     if (tenant && tenant?.id) {
       ctx.meta.tenant = tenant;
-
       return Promise.resolve(ctx);
     }
 
@@ -290,6 +258,11 @@ export default class ApiService extends moleculer.Service {
     const actionAuthType = req.$action.auth;
     if (actionAuthType === EndpointType.PUBLIC) {
       return Promise.resolve(null);
+    }
+    if (actionAuthType === EndpointType.API) {
+      const apiKey = req.headers['x-api-key'];
+      console.log('wou me?');
+      return this.verifyApiKey(ctx, apiKey as string);
     }
 
     const auth = req.headers.authorization;
@@ -360,8 +333,16 @@ export default class ApiService extends moleculer.Service {
     req: RequestMessage,
   ): Promise<unknown> {
     const user = ctx.meta.user;
+    const tenant = ctx.meta.tenant;
+    const actionAuthType = req.$action.auth;
 
-    if ([EndpointType.PUBLIC].includes(req.$action.auth)) {
+    if (actionAuthType === EndpointType.PUBLIC) {
+      return Promise.resolve(ctx);
+    }
+
+    console.log('wou?');
+
+    if (actionAuthType === EndpointType.API && !!tenant) {
       return Promise.resolve(ctx);
     }
 
