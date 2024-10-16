@@ -1,79 +1,54 @@
-import _ from "lodash";
-import Moleculer, { Context, Errors } from "moleculer";
-import { UserAuthMeta } from "../services/api.service";
-import { FieldHookCallback } from "./";
+import _ from 'lodash';
+import Moleculer, { Context, Errors } from 'moleculer';
+import { UserAuthMeta } from '../services/api.service';
+import { FieldHookCallback } from './';
 
 export const LKS_SRID = 3346;
 
 export enum EndpointType {
-  ADMIN = "ADMIN",
-  PUBLIC = "PUBLIC",
-  USER = "USER",
-  TENANT_ADMIN = "TENANT_ADMIN",
-  TENANT_USER = "TENANT_USER",
-  SELF = "SELF",
-  NON_AGREEING = "NON_AGREEING",
+  ADMIN = 'ADMIN',
+  PUBLIC = 'PUBLIC',
+  USER = 'USER',
+  TENANT_ADMIN = 'TENANT_ADMIN',
+  TENANT_USER = 'TENANT_USER',
+  SELF = 'SELF',
+  NON_AGREEING = 'NON_AGREEING',
+  API = 'API',
 }
 
 export enum Roles {
-  ADMIN = "ADMIN",
-  USER = "USER",
+  ADMIN = 'ADMIN',
+  USER = 'USER',
 }
 
-export function throwUnauthorizedError(
-  message?: string
-): Errors.MoleculerError {
-  throw new Moleculer.Errors.MoleculerClientError(
-    message || `Unauthorized.`,
-    401,
-    "UNAUTHORIZED"
-  );
+export function throwUnauthorizedError(message?: string): Errors.MoleculerError {
+  throw new Moleculer.Errors.MoleculerClientError(message || `Unauthorized.`, 401, 'UNAUTHORIZED');
 }
-export function throwBadRequestError(
-  message?: string,
-  data?: any
-): Errors.MoleculerError {
+export function throwBadRequestError(message?: string, data?: any): Errors.MoleculerError {
   throw new Moleculer.Errors.MoleculerClientError(
     message || `Bad request.`,
     400,
-    "BAD_REQUEST",
-    data
+    'BAD_REQUEST',
+    data,
   );
 }
 
-export function throwValidationError(
-  message?: string,
-  data?: any
-): Errors.MoleculerError {
-  throw new Moleculer.Errors.ValidationError(
-    message || `Not valid.`,
-    "VALIDATION_ERROR",
-    data
-  );
+export function throwValidationError(message?: string, data?: any): Errors.MoleculerError {
+  throw new Moleculer.Errors.ValidationError(message || `Not valid.`, 'VALIDATION_ERROR', data);
 }
 
 export function throwNotFoundError(message?: string): Errors.MoleculerError {
-  throw new Moleculer.Errors.MoleculerClientError(
-    message || `Not found.`,
-    404,
-    "NOT_FOUND"
-  );
+  throw new Moleculer.Errors.MoleculerClientError(message || `Not found.`, 404, 'NOT_FOUND');
 }
 
-export function throwAlreadyExistError(
-  message?: string
-): Errors.MoleculerError {
-  throw new Moleculer.Errors.MoleculerClientError(
-    message || `Already exists.`,
-    400,
-    "BAD_REQUEST"
-  );
+export function throwAlreadyExistError(message?: string): Errors.MoleculerError {
+  throw new Moleculer.Errors.MoleculerClientError(message || `Already exists.`, 400, 'BAD_REQUEST');
 }
 
 export function queryBoolean(field: string, value: boolean = false) {
   let fieldValue = `${_.snakeCase(field)} IS`;
   if (!value) {
-    fieldValue += " NOT";
+    fieldValue += ' NOT';
   }
   return { $raw: `${fieldValue} TRUE` };
 }
@@ -85,7 +60,7 @@ async function validateUserId(ctx: Context<{}, UserAuthMeta>, id: number) {
 
   if (!user?.id) return false;
 
-  const valid = await ctx.call("auth.validateType", {
+  const valid = await ctx.call('auth.validateType', {
     types: [EndpointType.ADMIN],
   });
 
@@ -93,7 +68,7 @@ async function validateUserId(ctx: Context<{}, UserAuthMeta>, id: number) {
   if (valid) return true;
 
   if (profile?.id) {
-    const userIds: number[] = await ctx.call("tenantUsers.findIdsByTenant", {
+    const userIds: number[] = await ctx.call('tenantUsers.findIdsByTenant', {
       id: profile?.id,
     });
 
@@ -103,13 +78,7 @@ async function validateUserId(ctx: Context<{}, UserAuthMeta>, id: number) {
   return id === user.id;
 }
 
-export const USER_PUBLIC_FIELDS = [
-  "id",
-  "firstName",
-  "lastName",
-  "email",
-  "phone",
-];
+export const USER_PUBLIC_FIELDS = ['id', 'firstName', 'lastName', 'email', 'phone'];
 
 export const USER_PUBLIC_GET = async ({ value, ctx }: any) => {
   if (!ctx.meta.user?.id || !value || !value?.id) return value;
@@ -120,17 +89,12 @@ export const USER_PUBLIC_GET = async ({ value, ctx }: any) => {
 
   return {
     id: value.id,
-    firstName: "Administratorius",
-    lastName: "",
+    firstName: 'Administratorius',
+    lastName: '',
   };
 };
 
-export function USER_PUBLIC_POPULATE(
-  ctx: any,
-  _values: any,
-  items: any[],
-  field: any
-) {
+export function USER_PUBLIC_POPULATE(ctx: any, _values: any, items: any[], field: any) {
   return Promise.all(
     items.map(async (item) => {
       const value = item[field.columnName || field.name];
@@ -139,27 +103,27 @@ export function USER_PUBLIC_POPULATE(
 
       if (!valid) return { id: value };
 
-      const validFindAll = await ctx.call("auth.validateType", {
+      const validFindAll = await ctx.call('auth.validateType', {
         types: [EndpointType.ADMIN],
       });
 
-      let scope: string | boolean = "";
+      let scope: string | boolean = '';
       if (validFindAll) {
         scope = false;
       }
 
-      return ctx.call("users.resolve", {
+      return ctx.call('users.resolve', {
         id: value,
         fields: USER_PUBLIC_FIELDS,
         scope,
       });
-    })
+    }),
   );
 }
 
 export const COMMON_FIELDS = {
   createdBy: {
-    type: "string",
+    type: 'string',
     readonly: true,
     populate: USER_PUBLIC_POPULATE,
     get: USER_PUBLIC_GET,
@@ -167,14 +131,14 @@ export const COMMON_FIELDS = {
   },
 
   createdAt: {
-    type: "date",
-    columnType: "datetime",
+    type: 'date',
+    columnType: 'datetime',
     readonly: true,
     onCreate: () => new Date(),
   },
 
   updatedBy: {
-    type: "string",
+    type: 'string',
     readonly: true,
     populate: USER_PUBLIC_POPULATE,
     get: USER_PUBLIC_GET,
@@ -182,23 +146,23 @@ export const COMMON_FIELDS = {
   },
 
   updatedAt: {
-    type: "date",
-    columnType: "datetime",
+    type: 'date',
+    columnType: 'datetime',
     readonly: true,
     onUpdate: () => new Date(),
   },
 
   deletedBy: {
-    type: "string",
+    type: 'string',
     readonly: true,
-    hidden: "byDefault",
+    hidden: 'byDefault',
     populate: USER_PUBLIC_POPULATE,
     onRemove: ({ ctx }: FieldHookCallback) => ctx.meta.user?.id,
   },
 
   deletedAt: {
-    type: "date",
-    columnType: "datetime",
+    type: 'date',
+    columnType: 'datetime',
     readonly: true,
     get: fieldValueForDeletedScope,
     onRemove: () => new Date(),
@@ -207,16 +171,16 @@ export const COMMON_FIELDS = {
 
 export const COMMON_HIDDEN_FIELDS = _.merge(COMMON_FIELDS, {
   deletedBy: {
-    hidden: "byDefault",
+    hidden: 'byDefault',
   },
   deletedAt: {
-    hidden: "byDefault",
+    hidden: 'byDefault',
   },
   updatedAt: {
-    hidden: "byDefault",
+    hidden: 'byDefault',
   },
   updatedBy: {
-    hidden: "byDefault",
+    hidden: 'byDefault',
   },
 });
 
@@ -224,10 +188,10 @@ function fieldValueForDeletedScope({ ctx, value }: any) {
   if (!ctx?.params?.scope) return;
   let scope = ctx.params.scope;
   if (!Array.isArray(scope)) {
-    scope = scope.split(",");
+    scope = scope.split(',');
   }
 
-  const scopesExists = scope.includes("deleted");
+  const scopesExists = scope.includes('deleted');
 
   if (!scopesExists) return;
   return value;
@@ -235,11 +199,11 @@ function fieldValueForDeletedScope({ ctx, value }: any) {
 
 export const TENANT_FIELD = {
   tenant: {
-    type: "number",
-    columnType: "integer",
-    columnName: "tenantId",
+    type: 'number',
+    columnType: 'integer',
+    columnName: 'tenantId',
     populate: {
-      action: "tenants.resolve",
+      action: 'tenants.resolve',
     },
     onCreate: ({ ctx }: FieldHookCallback) => ctx.meta.profile?.id,
   },
@@ -264,7 +228,7 @@ export interface BaseModelInterface {
   deletedBy?: number;
 }
 
-export const COMMON_DEFAULT_SCOPES = ["notDeleted"];
-export const COMMON_DELETED_SCOPES = ["-notDeleted", "deleted"];
+export const COMMON_DEFAULT_SCOPES = ['notDeleted'];
+export const COMMON_DELETED_SCOPES = ['-notDeleted', 'deleted'];
 
 export const AUTH_FREELANCERS_GROUP_ID = process.env.AUTH_FREELANCERS_GROUP_ID;

@@ -121,19 +121,22 @@ const AUTH_PROTECTED_SCOPES = [...COMMON_DEFAULT_SCOPES, VISIBLE_TO_USER_SCOPE];
 
 const populatePermissions = (field: string) => {
   return function (ctx: Context<{}, UserAuthMeta>, _values: any, forms: any[]) {
-    const { user, profile } = ctx?.meta;
+    const { user, profile, authUser } = ctx?.meta;
     return forms.map((form: any) => {
-      const editingPermissions = this.hasPermissionToEdit(form, user, profile);
+      const editingPermissions = this.hasPermissionToEdit(form, user, authUser, profile);
       return !!editingPermissions[field];
     });
   };
 };
 
-async function validateCategories({ value, ctx }: FieldHookCallback) {
+async function validateCategories({ value, ctx, params, entity }: FieldHookCallback) {
   if (!value) return;
 
+  const subcategories = params?.subCategories || entity?.subCategories;
+  const hasSubcategories = subcategories && subcategories?.length;
+
   const dbCategories: Category[] = await ctx.call('categories.find', {
-    query: { id: { $in: value } },
+    query: { ...(hasSubcategories && { parent: { $exists: false } }), id: { $in: value } },
   });
 
   const isValid = dbCategories.length === value.length;
@@ -198,6 +201,7 @@ function isUrlValid({ value }: FieldHookCallback) {
   mixins: [
     DbConnection({
       collection: 'forms',
+      entityChangedOldEntity: true,
     }),
     PostgisMixin({
       srid: LKS_SRID,
@@ -318,7 +322,7 @@ function isUrlValid({ value }: FieldHookCallback) {
       isActive: {
         type: 'boolean',
         optional: true,
-        default: false,
+        default: true,
         validate: 'validateIsActive',
       },
       status: {
@@ -528,12 +532,19 @@ export default class FormsService extends moleculer.Service {
   }
 
   @Action({
+    rest: 'POST /external',
+    auth: EndpointType.API,
     params: {
       externalId: {
         type: 'string',
         convert: true,
       },
       nameLT: 'string',
+      status: {
+        type: 'string',
+        enum: [FormStatus.CREATED, FormStatus.APPROVED],
+        default: FormStatus.APPROVED,
+      },
     },
   })
   async createExternalForm(ctx: Context<ApiForm, any>) {
@@ -541,8 +552,8 @@ export default class FormsService extends moleculer.Service {
     const meta = ctx.meta as any;
     const tenant = meta.tenant;
     ctx.meta.profile = { id: tenant.id };
-    ctx.meta.autoApprove = true;
-    ctx.params.isActive = true;
+
+    ctx.meta.autoApprove = ctx.params.status === FormStatus.APPROVED;
 
     const form = await ctx.call('forms.findOne', {
       query: { externalId: params.externalId, tenant: tenant.id },
@@ -552,12 +563,15 @@ export default class FormsService extends moleculer.Service {
       throwAlreadyExistError('Form already exists');
     }
     const formFields = await this.validateExternalFormFields(ctx, params, tenant);
+
     await ctx.call('forms.create', formFields);
 
     return { success: true };
   }
 
   @Action({
+    rest: 'PATCH /external/:externalId',
+    auth: EndpointType.API,
     params: {
       externalId: {
         type: 'string',
@@ -588,31 +602,8 @@ export default class FormsService extends moleculer.Service {
   }
 
   @Action({
-    externalId: {
-      type: 'string',
-      convert: true,
-    },
-  })
-  async deleteExternalForm(ctx: Context<any>) {
-    const params = ctx.params;
-    const tenant = (ctx.meta as any)?.tenant;
-
-    const form: Form = await ctx.call('forms.findOne', {
-      query: { externalId: params.externalId, tenant: tenant.id },
-    });
-
-    if (!form) {
-      throwNotFoundError('Form not found');
-    }
-
-    await ctx.call('forms.remove', {
-      id: form.id,
-    });
-
-    return { success: true };
-  }
-
-  @Action({
+    rest: 'POST /external/import',
+    auth: EndpointType.API,
     params: {
       forms: {
         type: 'array',
@@ -624,6 +615,11 @@ export default class FormsService extends moleculer.Service {
               convert: true,
             },
             nameLT: 'string',
+            status: {
+              type: 'string',
+              enum: [FormStatus.CREATED, FormStatus.APPROVED],
+              default: FormStatus.APPROVED,
+            },
           },
         },
       },
@@ -635,7 +631,6 @@ export default class FormsService extends moleculer.Service {
     const meta = ctx.meta as any;
     const tenant = meta.tenant;
     ctx.meta.profile = { id: tenant.id };
-    ctx.meta.autoApprove = true;
 
     const uniqueForms = new Set(forms.map((v) => v.externalId));
 
@@ -662,6 +657,8 @@ export default class FormsService extends moleculer.Service {
         query: { externalId: form.externalId, tenant: tenant.id },
       });
 
+      ctx.meta.autoApprove = form.status === FormStatus.APPROVED;
+
       if (formToUpdate) {
         await ctx.call('forms.update', {
           id: formToUpdate.id,
@@ -673,6 +670,65 @@ export default class FormsService extends moleculer.Service {
     }
 
     return { success: true };
+  }
+
+  @Action({
+    rest: 'DELETE /external/:externalId',
+    auth: EndpointType.API,
+    externalId: {
+      type: 'string',
+      convert: true,
+    },
+  })
+  async deleteExternalForm(ctx: Context<any>) {
+    const params = ctx.params;
+    const tenant = (ctx.meta as any)?.tenant;
+
+    const form: Form = await ctx.call('forms.findOne', {
+      query: { externalId: params.externalId, tenant: tenant.id },
+    });
+
+    if (!form) {
+      throwNotFoundError('Form not found');
+    }
+
+    await ctx.call('forms.remove', {
+      id: form.id,
+    });
+
+    return { success: true };
+  }
+
+  @Action({ rest: 'GET /external', auth: EndpointType.API })
+  async getExternalForms(ctx: Context<any, UserAuthMeta>) {
+    const tenant = ctx.meta?.tenant;
+    const params = ctx?.params || {};
+    const forms: Form = await ctx.call('forms.list', {
+      ...params,
+      query: { ...(params?.query || {}), tenant: tenant.id },
+    });
+
+    return forms;
+  }
+
+  @Action({
+    rest: 'GET /external/:externalId',
+    auth: EndpointType.API,
+    externalId: {
+      type: 'string',
+      convert: true,
+    },
+  })
+  async getExternalForm(ctx: Context<any, UserAuthMeta>) {
+    const params = ctx.params || {};
+    const tenant = ctx.meta?.tenant;
+
+    const form: Form = await ctx.call('forms.findOne', {
+      ...params,
+      query: { externalId: params?.externalId, tenant: tenant.id },
+    });
+
+    return form;
   }
 
   @Method
@@ -865,25 +921,34 @@ export default class FormsService extends moleculer.Service {
 
   @Method
   validateStatus({ ctx, value, entity }: FieldHookCallback) {
-    const { user, profile } = ctx.meta;
-    if (!value || !user?.id) return true;
+    const { user, profile, authUser } = ctx.meta;
 
-    const isAdmin = user.type === UserType.ADMIN;
+    if (!value) return true;
+
+    const isAdmin = user?.type === UserType.ADMIN;
+    const isSuperAdmin = authUser?.type === UserType.SUPER_ADMIN;
 
     const adminStatuses = [FormStatus.REJECTED, FormStatus.RETURNED, FormStatus.APPROVED];
 
     const newStatuses = [FormStatus.CREATED, FormStatus.APPROVED];
 
     const error = `Cannot set status with value ${value}`;
+
     if (!entity?.id) {
       return newStatuses.includes(value) || error;
     }
 
-    const editingPermissions = this.hasPermissionToEdit(entity, user, profile);
+    const { edit, validate } = this.hasPermissionToEdit(entity, user, authUser, profile);
 
-    if (editingPermissions.edit) {
-      return isAdmin ? value === FormStatus.APPROVED : value === FormStatus.SUBMITTED || error;
-    } else if (editingPermissions.validate) {
+    if (edit) {
+      return (
+        !user?.id ||
+        isSuperAdmin ||
+        (isAdmin && value === FormStatus.APPROVED) ||
+        value === FormStatus.SUBMITTED ||
+        error
+      );
+    } else if (validate) {
       return adminStatuses.includes(value) || error;
     }
 
@@ -894,6 +959,7 @@ export default class FormsService extends moleculer.Service {
   hasPermissionToEdit(
     form: any,
     user?: User,
+    authUser?: User,
     profile?: Tenant,
   ): {
     edit: boolean;
@@ -901,36 +967,29 @@ export default class FormsService extends moleculer.Service {
   } {
     const invalid = { edit: false, validate: false };
 
-    const tenant = form.tenant || form.tenantId;
-
-    // form uploaded via api
-    const isApiUpload = !user?.id;
-
-    if (!form?.id || [FormStatus.REJECTED].includes(form?.status)) {
+    if (!form?.id || form.status === FormStatus.REJECTED) {
       return invalid;
     }
 
-    if (isApiUpload) {
-      return {
-        edit: true,
-        validate: true,
-      };
+    const isSuperAdmin = authUser?.type === UserType.SUPER_ADMIN;
+    const tenant = form.tenant || form.tenantId;
+    const isCreatedByUser = !tenant && user && user.id === form.createdBy;
+    const isCreatedByTenant = profile?.id === tenant;
+    const isAdmin = user?.type === UserType.ADMIN;
+
+    if (!user?.id) {
+      return { edit: true, validate: true };
     }
 
-    const isCreatedByUser = !tenant && user && user.id === form.createdBy;
-    const isCreatedByTenant = profile && profile.id === tenant;
-    const isAdmin = user.type === UserType.ADMIN;
+    if (isCreatedByUser || isCreatedByTenant) {
+      const canEdit = [FormStatus.RETURNED, FormStatus.APPROVED].includes(form.status);
+      return { edit: canEdit, validate: false };
+    }
 
-    if (isCreatedByTenant || isCreatedByUser) {
-      return {
-        validate: false,
-        edit: [FormStatus.RETURNED, FormStatus.APPROVED].includes(form?.status),
-      };
-    } else if (isAdmin) {
-      return {
-        edit: [FormStatus.APPROVED].includes(form.status),
-        validate: [FormStatus.CREATED, FormStatus.SUBMITTED].includes(form?.status),
-      };
+    if (isAdmin) {
+      const canEdit = isSuperAdmin || form.status === FormStatus.APPROVED;
+      const canValidate = [FormStatus.CREATED, FormStatus.SUBMITTED].includes(form.status);
+      return { edit: canEdit, validate: canValidate };
     }
 
     return invalid;
@@ -1023,13 +1082,16 @@ export default class FormsService extends moleculer.Service {
   async 'forms.updated'(ctx: Context<EntityChangedParams<Form>>) {
     const { oldData: prevForm, data: form } = ctx.params;
 
-    if (prevForm?.status !== form?.status) {
+    if (prevForm?.status === FormStatus.APPROVED) {
+      await this.createFormHistory(ctx, form.id, FormHistoryTypes.UPDATED);
+      await this.refreshObjects(ctx);
+    } else if (prevForm?.status !== form?.status) {
       const { comment } = ctx.options?.parentCtx?.params as any;
       const typesByStatus = {
         [FormStatus.SUBMITTED]: FormHistoryTypes.UPDATED,
         [FormStatus.REJECTED]: FormHistoryTypes.REJECTED,
         [FormStatus.RETURNED]: FormHistoryTypes.RETURNED,
-        [FormStatus.APPROVED]: FormHistoryTypes.UPDATED,
+        [FormStatus.APPROVED]: FormHistoryTypes.APPROVED,
       };
 
       if (form?.status === FormStatus.APPROVED) {
