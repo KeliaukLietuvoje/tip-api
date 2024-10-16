@@ -322,7 +322,7 @@ function isUrlValid({ value }: FieldHookCallback) {
       isActive: {
         type: 'boolean',
         optional: true,
-        default: false,
+        default: true,
         validate: 'validateIsActive',
       },
       status: {
@@ -553,9 +553,7 @@ export default class FormsService extends moleculer.Service {
     const tenant = meta.tenant;
     ctx.meta.profile = { id: tenant.id };
 
-    const isApproved = ctx.params.status === FormStatus.APPROVED;
-    ctx.meta.autoApprove = isApproved;
-    ctx.params.isActive = isApproved;
+    ctx.meta.autoApprove = ctx.params.status === FormStatus.APPROVED;
 
     const form = await ctx.call('forms.findOne', {
       query: { externalId: params.externalId, tenant: tenant.id },
@@ -659,9 +657,7 @@ export default class FormsService extends moleculer.Service {
         query: { externalId: form.externalId, tenant: tenant.id },
       });
 
-      const isApproved = form.status === FormStatus.APPROVED;
-      ctx.meta.autoApprove = isApproved;
-      form.isActive = isApproved;
+      ctx.meta.autoApprove = form.status === FormStatus.APPROVED;
 
       if (formToUpdate) {
         await ctx.call('forms.update', {
