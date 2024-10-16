@@ -946,6 +946,7 @@ export default class FormsService extends moleculer.Service {
 
     if (edit) {
       return (
+        !user?.id ||
         isSuperAdmin ||
         (isAdmin && value === FormStatus.APPROVED) ||
         value === FormStatus.SUBMITTED ||
@@ -975,16 +976,13 @@ export default class FormsService extends moleculer.Service {
     }
 
     const isSuperAdmin = authUser?.type === UserType.SUPER_ADMIN;
-    const isCreatedByApiOrSuperAdmin = !user?.id || isSuperAdmin;
     const tenant = form.tenant || form.tenantId;
     const isCreatedByUser = !tenant && user && user.id === form.createdBy;
     const isCreatedByTenant = profile?.id === tenant;
     const isAdmin = user?.type === UserType.ADMIN;
 
-    if (isCreatedByApiOrSuperAdmin) {
-      const canValidate =
-        isSuperAdmin && [FormStatus.CREATED, FormStatus.SUBMITTED].includes(form.status);
-      return { edit: true, validate: canValidate };
+    if (!user?.id) {
+      return { edit: true, validate: true };
     }
 
     if (isCreatedByUser || isCreatedByTenant) {
@@ -993,7 +991,7 @@ export default class FormsService extends moleculer.Service {
     }
 
     if (isAdmin) {
-      const canEdit = form.status === FormStatus.APPROVED;
+      const canEdit = isSuperAdmin || form.status === FormStatus.APPROVED;
       const canValidate = [FormStatus.CREATED, FormStatus.SUBMITTED].includes(form.status);
       return { edit: canEdit, validate: canValidate };
     }
