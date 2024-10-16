@@ -145,6 +145,11 @@ const isLocalDevelopment = process.env.NODE_ENV === 'local';
       rest: null,
     },
   },
+  hooks: {
+    before: {
+      getEventsFeatureCollection: 'queryJson',
+    },
+  },
 })
 export default class TilesObjectsService extends moleculer.Service {
   @Event()
