@@ -1,12 +1,12 @@
-"use strict";
-import { FeatureCollection, parse } from "geojsonjs";
-import { every, isArray, isEmpty, isNumber } from "lodash";
-import moleculer, { Context, RestSchema } from "moleculer";
-import { Action, Event, Method, Service } from "moleculer-decorators";
-import PostgisMixin, { GeometryType } from "moleculer-postgis";
-import DbConnection from "../mixins/database.mixin";
+'use strict';
+import { FeatureCollection, parse } from 'geojsonjs';
+import { every, isArray, isEmpty, isNumber } from 'lodash';
+import moleculer, { Context, RestSchema } from 'moleculer';
+import { Action, Event, Method, Service } from 'moleculer-decorators';
+import PostgisMixin, { GeometryType } from 'moleculer-postgis';
+import DbConnection, { MaterializedView } from '../mixins/database.mixin';
 //@ts-ignore
-import transformation from "transform-coordinates";
+import transformation from 'transform-coordinates';
 import {
   ALL_FILE_TYPES,
   BaseModelInterface,
@@ -14,31 +14,33 @@ import {
   COMMON_FIELDS,
   COMMON_SCOPES,
   ContextMeta,
+  EndpointType,
   EntityChangedParams,
   FieldHookCallback,
+  LKS_SRID,
   TENANT_FIELD,
   throwAlreadyExistError,
   throwBadRequestError,
   throwNotFoundError,
   throwValidationError,
-} from "../types";
-import { toReadableStream } from "../utils";
-import { emailCanBeSent } from "../utils/mails";
-import { UserAuthMeta } from "./api.service";
-import { Category } from "./categories.service";
-import { FormHistoryTypes } from "./forms.histories.service";
-import { Tenant } from "./tenants.service";
-import { User, USERS_DEFAULT_SCOPES, UserType } from "./users.service";
-import { VisitInfo } from "./visitInfos.service";
+} from '../types';
+import { toReadableStream } from '../utils';
+import { emailCanBeSent } from '../utils/mails';
+import { UserAuthMeta } from './api.service';
+import { Category } from './categories.service';
+import { FormHistoryTypes } from './forms.histories.service';
+import { Tenant } from './tenants.service';
+import { User, USERS_DEFAULT_SCOPES, UserType } from './users.service';
+import { VisitInfo } from './visitInfos.service';
 
 type FormStatusChanged = { statusChanged: boolean };
 type RequestAutoApprove = { autoApprove: boolean };
 
 export const Seasons = {
-  WINTER: "WINTER",
-  SUMMER: "SUMMER",
-  SPRING: "SPRING",
-  AUTUMN: "AUTUMN",
+  WINTER: 'WINTER',
+  SUMMER: 'SUMMER',
+  SPRING: 'SPRING',
+  AUTUMN: 'AUTUMN',
 };
 
 export interface Photo {
@@ -68,6 +70,7 @@ export interface ApiForm {
   isPaid: boolean;
   isAdaptedForForeigners: boolean;
   photos: Photo[];
+  isActive?: boolean;
 }
 
 export interface Form extends BaseModelInterface {
@@ -94,24 +97,24 @@ export interface Form extends BaseModelInterface {
 }
 
 export const FormStatus = {
-  CREATED: "CREATED",
-  SUBMITTED: "SUBMITTED",
-  REJECTED: "REJECTED",
-  RETURNED: "RETURNED",
-  APPROVED: "APPROVED",
+  CREATED: 'CREATED',
+  SUBMITTED: 'SUBMITTED',
+  REJECTED: 'REJECTED',
+  RETURNED: 'RETURNED',
+  APPROVED: 'APPROVED',
 };
 
-const VISIBLE_TO_USER_SCOPE = "visibleToUser";
+const VISIBLE_TO_USER_SCOPE = 'visibleToUser';
 const urlRegex =
   /^((https?|ftp):\/\/)?(www.)?(((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:)*@)?(((\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5]))|((([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.)+(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.?)(:\d*)?)(\/((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)+(\/(([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)*)*)?)?(\?((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)|[\uE000-\uF8FF]|\/|\?)*)?(\#((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)|\/|\?)*)?$/i;
 
 const importPhotoTypes = [
-  "image/png",
-  "image/jpeg",
-  "image/jpg",
-  "image/bmp",
-  "image/webp",
-  "image/tiff",
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/bmp',
+  'image/webp',
+  'image/tiff',
 ];
 
 const AUTH_PROTECTED_SCOPES = [...COMMON_DEFAULT_SCOPES, VISIBLE_TO_USER_SCOPE];
@@ -129,29 +132,24 @@ const populatePermissions = (field: string) => {
 async function validateCategories({ value, ctx }: FieldHookCallback) {
   if (!value) return;
 
-  const dbCategories: Category[] = await ctx.call("categories.find", {
-    query: { parent: { $exists: false }, id: { $in: value } },
+  const dbCategories: Category[] = await ctx.call('categories.find', {
+    query: { id: { $in: value } },
   });
 
   const isValid = dbCategories.length === value.length;
 
-  if (!isValid) return throwValidationError("categories are not valid");
+  if (!isValid) return throwValidationError('categories are not valid');
 
   return value;
 }
 
-async function validateSubCategories({
-  params,
-  value,
-  ctx,
-  entity,
-}: FieldHookCallback) {
+async function validateSubCategories({ params, value, ctx, entity }: FieldHookCallback) {
   if (!value) return;
 
   const categories = params.categories || entity.categories;
 
-  const dbCategories: Category[] = await ctx.call("categories.resolve", {
-    populate: "children",
+  const dbCategories: Category[] = await ctx.call('categories.resolve', {
+    populate: 'children',
     id: categories,
   });
 
@@ -159,7 +157,7 @@ async function validateSubCategories({
 
   const isValid = value.every((id: number) => childIds[id]);
 
-  if (!isValid) return throwValidationError("subCategories are not valid");
+  if (!isValid) return throwValidationError('subCategories are not valid');
 
   return value;
 }
@@ -178,7 +176,7 @@ function isUrlLTValid({ value }: FieldHookCallback) {
   if (!value) return;
 
   if (!urlRegex.test(value)) {
-    return throwValidationError("urlLT is not invalid");
+    return throwValidationError('urlLT is not invalid');
   }
 
   return value;
@@ -188,142 +186,146 @@ function isUrlValid({ value }: FieldHookCallback) {
   if (!value) return;
 
   if (!urlRegex.test(value)) {
-    return throwValidationError("url is not invalid");
+    return throwValidationError('url is not invalid');
   }
 
   return value;
 }
 
 @Service({
-  name: "forms",
+  name: 'forms',
 
   mixins: [
     DbConnection({
-      collection: "forms",
+      collection: 'forms',
     }),
     PostgisMixin({
-      srid: 3346,
+      srid: LKS_SRID,
     }),
   ],
 
   settings: {
     fields: {
       id: {
-        type: "string",
-        columnType: "integer",
+        type: 'string',
+        columnType: 'integer',
         primaryKey: true,
         secure: true,
       },
       seasons: {
-        type: "array",
+        type: 'array',
         enum: Object.values(Seasons),
       },
       geom: {
-        type: "any",
+        type: 'any',
+        required: true,
         geom: {
           required: true,
           types: [GeometryType.POINT],
         },
       },
-      description: "string",
-      externalId: "string",
+      description: 'string',
+      externalId: 'string',
       descriptionLT: {
-        type: "string",
-        columnType: "text",
-        columnName: "descriptionLt",
+        type: 'string',
+        columnType: 'text',
+        columnName: 'descriptionLt',
       },
 
       nameLT: {
-        type: "string",
+        type: 'string',
         required: true,
-        columnType: "text",
-        columnName: "nameLt",
+        columnType: 'text',
+        columnName: 'nameLt',
       },
-      name: "string",
+      name: 'string',
       urlLT: {
-        type: "string",
-        columnType: "text",
-        columnName: "urlLt",
+        type: 'string',
+        columnType: 'text',
+        columnName: 'urlLt',
         onCreate: isUrlLTValid,
         onUpdate: isUrlLTValid,
         onReplace: isUrlLTValid,
       },
+
       url: {
-        type: "string",
+        type: 'string',
         onCreate: isUrlValid,
         onUpdate: isUrlValid,
         onReplace: isUrlValid,
       },
+
       visitDuration: {
-        type: "object",
+        type: 'object',
         properties: {
           from: {
-            type: "number",
+            type: 'number',
           },
           to: {
-            type: "number",
+            type: 'number',
           },
           isAllDay: {
-            type: "boolean",
+            type: 'boolean',
           },
         },
       },
+
       visitInfo: {
-        type: "number",
-        columnType: "integer",
-        columnName: "visitInfoId",
+        type: 'number',
+        columnType: 'integer',
+        columnName: 'visitInfoId',
         populate: {
-          action: "visitInfos.resolve",
+          action: 'visitInfos.resolve',
         },
       },
 
       additionalInfos: {
-        type: "array",
-        columnType: "json",
-        items: { type: "number" },
+        type: 'array',
+        columnType: 'json',
+        items: { type: 'number' },
         populate: {
-          action: "additionalInfos.resolve",
+          action: 'additionalInfos.resolve',
         },
       },
 
       categories: {
-        type: "array",
+        type: 'array',
         onCreate: validateCategories,
         onUpdate: validateCategories,
         onReplace: validateCategories,
-        columnType: "json",
+        columnType: 'json',
         required: true,
-        items: { type: "number" },
+        items: { type: 'number' },
         populate: {
-          action: "categories.resolve",
+          action: 'categories.resolve',
         },
       },
+
       subCategories: {
-        type: "array",
+        type: 'array',
         onCreate: validateSubCategories,
         onUpdate: validateSubCategories,
         onReplace: validateSubCategories,
-        columnType: "json",
-        items: { type: "number" },
+        columnType: 'json',
+        items: { type: 'number' },
         populate: {
-          action: "categories.resolve",
+          action: 'categories.resolve',
         },
       },
-      isPaid: "boolean",
-      isAdaptedForForeigners: "boolean",
+
+      isPaid: 'boolean',
+      isAdaptedForForeigners: 'boolean',
       isActive: {
-        type: "boolean",
+        type: 'boolean',
         optional: true,
-        default: true,
-        validate: "validateIsActive",
+        default: false,
+        validate: 'validateIsActive',
       },
       status: {
-        type: "string",
+        type: 'string',
         enum: Object.values(FormStatus),
-        validate: "validateStatus",
-        onCreate: function ({
-          ctx,
-        }: FieldHookCallback & ContextMeta<RequestAutoApprove>) {
+        validate: 'validateStatus',
+        onCreate: function ({ ctx }: FieldHookCallback & ContextMeta<RequestAutoApprove>) {
           const { autoApprove } = ctx?.meta;
           return autoApprove ? FormStatus.APPROVED : FormStatus.CREATED;
         },
@@ -334,24 +336,21 @@ function isUrlValid({ value }: FieldHookCallback) {
         }: FieldHookCallback & ContextMeta<FormStatusChanged>) {
           const { user } = ctx?.meta;
 
-          if (
-            !ctx?.meta?.statusChanged ||
-            entity?.status === FormStatus.APPROVED
-          )
-            return;
+          if (!ctx?.meta?.statusChanged || entity?.status === FormStatus.APPROVED) return;
           else if (!user?.id) return value;
 
           return value || FormStatus.SUBMITTED;
         },
       },
+
       photos: {
-        type: "array",
-        columnType: "json",
-        items: { type: "object" },
+        type: 'array',
+        columnType: 'json',
+        items: { type: 'object' },
       },
       respondedAt: {
-        type: "date",
-        columnType: "datetime",
+        type: 'date',
+        columnType: 'datetime',
         readonly: true,
         set: ({ ctx }: FieldHookCallback & ContextMeta<FormStatusChanged>) => {
           const { user, statusChanged } = ctx?.meta;
@@ -361,15 +360,15 @@ function isUrlValid({ value }: FieldHookCallback) {
       },
 
       canEdit: {
-        type: "boolean",
+        type: 'boolean',
         virtual: true,
-        populate: populatePermissions("edit"),
+        populate: populatePermissions('edit'),
       },
 
       canValidate: {
-        type: "boolean",
+        type: 'boolean',
         virtual: true,
-        populate: populatePermissions("validate"),
+        populate: populatePermissions('validate'),
       },
 
       ...TENANT_FIELD,
@@ -399,30 +398,62 @@ function isUrlValid({ value }: FieldHookCallback) {
     },
 
     defaultScopes: AUTH_PROTECTED_SCOPES,
-    defaultPopulates: ["geom"],
+    defaultPopulates: ['geom'],
   },
 
   hooks: {
     before: {
-      create: ["validateStatusChange"],
-      update: ["validateStatusChange"],
+      create: ['validateStatusChange'],
+      update: ['validateStatusChange'],
     },
   },
 
   actions: {
     update: {
       additionalParams: {
-        comment: { type: "string", optional: true },
+        comment: { type: 'string', optional: true },
       },
     },
   },
 })
 export default class FormsService extends moleculer.Service {
   @Action({
-    rest: "GET /:id/history",
+    rest: <RestSchema>{
+      method: 'GET',
+      basePath: '/public',
+      path: '/forms',
+    },
+    auth: EndpointType.PUBLIC,
+  })
+  async publicList(ctx: Context) {
+    return ctx.call('tiles.objects.list', ctx.params);
+  }
+
+  @Action({
+    rest: <RestSchema>{
+      method: 'GET',
+      basePath: '/public',
+      path: '/forms/:id',
+    },
+    auth: EndpointType.PUBLIC,
     params: {
       id: {
-        type: "number",
+        type: 'number',
+        convert: true,
+      },
+    },
+  })
+  async publicGetOne(ctx: Context<{ id: string }>) {
+    return ctx.call('tiles.objects.get', {
+      id: ctx.params.id,
+    });
+  }
+
+  @Action({
+    rest: 'GET /:id/history',
+    params: {
+      id: {
+        type: 'number',
         convert: true,
       },
     },
@@ -432,36 +463,34 @@ export default class FormsService extends moleculer.Service {
       id: number;
       page?: number;
       pageSize?: number;
-    }>
+    }>,
   ) {
     return ctx.call(`forms.histories.list`, {
-      sort: "-createdAt",
+      sort: '-createdAt',
       query: {
         form: ctx.params.id,
       },
       page: ctx.params.page,
       pageSize: ctx.params.pageSize,
-      populate: "createdBy",
+      populate: 'createdBy',
     });
   }
 
   @Action({
-    rest: "PATCH /:id/disable",
+    rest: 'PATCH /:id/disable',
     params: {
       id: {
-        type: "number",
+        type: 'number',
         convert: true,
       },
       shouldEnable: {
-        type: "boolean",
+        type: 'boolean',
         optional: true,
       },
     },
   })
-  async formDisable(
-    ctx: Context<{ id: number; shouldEnable?: boolean }, UserAuthMeta>
-  ) {
-    const form: Form = await ctx.call("forms.resolve", {
+  async formDisable(ctx: Context<{ id: number; shouldEnable?: boolean }, UserAuthMeta>) {
+    const form: Form = await ctx.call('forms.resolve', {
       id: ctx.params.id,
       throwIfNotExist: true,
     });
@@ -478,9 +507,9 @@ export default class FormsService extends moleculer.Service {
 
   @Action({
     rest: <RestSchema>{
-      method: "POST",
-      path: "/upload",
-      type: "multipart",
+      method: 'POST',
+      path: '/upload',
+      type: 'multipart',
       busboyConfig: {
         limits: {
           files: 1,
@@ -490,7 +519,7 @@ export default class FormsService extends moleculer.Service {
   })
   async upload(ctx: Context<{}, UserAuthMeta>) {
     const folder = this.getFolderName(ctx.meta?.user, ctx.meta?.profile);
-    return ctx.call("minio.uploadFile", {
+    return ctx.call('minio.uploadFile', {
       payload: ctx.params,
       isPrivate: false,
       types: ALL_FILE_TYPES,
@@ -501,10 +530,10 @@ export default class FormsService extends moleculer.Service {
   @Action({
     params: {
       externalId: {
-        type: "string",
+        type: 'string',
         convert: true,
       },
-      nameLT: "string",
+      nameLT: 'string',
     },
   })
   async createExternalForm(ctx: Context<ApiForm, any>) {
@@ -513,20 +542,17 @@ export default class FormsService extends moleculer.Service {
     const tenant = meta.tenant;
     ctx.meta.profile = { id: tenant.id };
     ctx.meta.autoApprove = true;
+    ctx.params.isActive = true;
 
-    const form = await ctx.call("forms.findOne", {
+    const form = await ctx.call('forms.findOne', {
       query: { externalId: params.externalId, tenant: tenant.id },
     });
 
     if (!!form) {
-      throwAlreadyExistError("Form already exists");
+      throwAlreadyExistError('Form already exists');
     }
-    const formFields = await this.validateExternalFormFields(
-      ctx,
-      params,
-      tenant
-    );
-    await ctx.call("forms.create", formFields);
+    const formFields = await this.validateExternalFormFields(ctx, params, tenant);
+    await ctx.call('forms.create', formFields);
 
     return { success: true };
   }
@@ -534,7 +560,7 @@ export default class FormsService extends moleculer.Service {
   @Action({
     params: {
       externalId: {
-        type: "string",
+        type: 'string',
         convert: true,
       },
     },
@@ -543,21 +569,17 @@ export default class FormsService extends moleculer.Service {
     const params = ctx.params;
     const tenant = (ctx.meta as any)?.tenant;
 
-    const form: Form = await ctx.call("forms.findOne", {
+    const form: Form = await ctx.call('forms.findOne', {
       query: { externalId: params.externalId, tenant: tenant.id },
     });
 
     if (!form) {
-      throwNotFoundError("Form not found");
+      throwNotFoundError('Form not found');
     }
 
-    const formFields = await this.validateExternalFormFields(
-      ctx,
-      params,
-      tenant
-    );
+    const formFields = await this.validateExternalFormFields(ctx, params, tenant);
 
-    await ctx.call("forms.update", {
+    await ctx.call('forms.update', {
       id: form.id,
       ...formFields,
     });
@@ -567,7 +589,7 @@ export default class FormsService extends moleculer.Service {
 
   @Action({
     externalId: {
-      type: "string",
+      type: 'string',
       convert: true,
     },
   })
@@ -575,15 +597,15 @@ export default class FormsService extends moleculer.Service {
     const params = ctx.params;
     const tenant = (ctx.meta as any)?.tenant;
 
-    const form: Form = await ctx.call("forms.findOne", {
+    const form: Form = await ctx.call('forms.findOne', {
       query: { externalId: params.externalId, tenant: tenant.id },
     });
 
     if (!form) {
-      throwNotFoundError("Form not found");
+      throwNotFoundError('Form not found');
     }
 
-    await ctx.call("forms.remove", {
+    await ctx.call('forms.remove', {
       id: form.id,
     });
 
@@ -593,15 +615,15 @@ export default class FormsService extends moleculer.Service {
   @Action({
     params: {
       forms: {
-        type: "array",
+        type: 'array',
         items: {
-          type: "object",
+          type: 'object',
           properties: {
             externalId: {
-              type: "string",
+              type: 'string',
               convert: true,
             },
-            nameLT: "string",
+            nameLT: 'string',
           },
         },
       },
@@ -618,20 +640,15 @@ export default class FormsService extends moleculer.Service {
     const uniqueForms = new Set(forms.map((v) => v.externalId));
 
     if (uniqueForms.size < forms.length) {
-      throwAlreadyExistError("Forms have duplicate externalIds");
+      throwAlreadyExistError('Forms have duplicate externalIds');
     }
 
     const validForms = await Promise.all(
       params.forms.map(async (form: ApiForm, index: number) => {
         const formPrefix = `Form ${index}.`;
 
-        return await this.validateExternalFormFields(
-          ctx,
-          form,
-          tenant,
-          formPrefix
-        );
-      })
+        return await this.validateExternalFormFields(ctx, form, tenant, formPrefix);
+      }),
     );
     const adapter = await this.getAdapter(ctx);
 
@@ -641,17 +658,17 @@ export default class FormsService extends moleculer.Service {
     });
 
     for (const form of validForms) {
-      const formToUpdate: Form = await ctx.call("forms.findOne", {
+      const formToUpdate: Form = await ctx.call('forms.findOne', {
         query: { externalId: form.externalId, tenant: tenant.id },
       });
 
       if (formToUpdate) {
-        await ctx.call("forms.update", {
+        await ctx.call('forms.update', {
           id: formToUpdate.id,
           ...form,
         });
       } else {
-        await ctx.call("forms.create", form);
+        await ctx.call('forms.create', form);
       }
     }
 
@@ -663,19 +680,17 @@ export default class FormsService extends moleculer.Service {
     photos: Photo[],
     tenant: Tenant,
     ctx: moleculer.Context<ApiForm, {}, moleculer.GenericObject>,
-    errorPrefix: string
+    errorPrefix: string,
   ) {
     const photoBlobs = await Promise.all(
       (photos || []).map(async (photo: Photo, index: number) => {
         const { url, ...rest } = photo;
         const response = await fetch(url);
-        const contentType = response.headers.get("content-type");
+        const contentType = response.headers.get('content-type');
         const stream = response.body.getReader();
 
         if (!importPhotoTypes.includes(contentType)) {
-          return throwValidationError(
-            `${errorPrefix} Photo ${index} unsupported mimetype`
-          );
+          return throwValidationError(`${errorPrefix} Photo ${index} unsupported mimetype`);
         }
 
         return {
@@ -683,7 +698,7 @@ export default class FormsService extends moleculer.Service {
           contentType,
           stream,
         };
-      })
+      }),
     );
 
     const uploadedPhotos = await Promise.all(
@@ -695,7 +710,7 @@ export default class FormsService extends moleculer.Service {
             name: string;
             author: string;
           },
-          index: number
+          index: number,
         ) => {
           try {
             const { stream, name, author, contentType } = photo;
@@ -703,7 +718,7 @@ export default class FormsService extends moleculer.Service {
             const folder = this.getFolderName(undefined, tenant);
 
             const uploadedPhoto: any = await ctx.call(
-              "minio.uploadFile",
+              'minio.uploadFile',
               {
                 payload: toReadableStream(stream),
                 isPrivate: false,
@@ -715,7 +730,7 @@ export default class FormsService extends moleculer.Service {
                   mimetype: contentType,
                   filename: name,
                 },
-              }
+              },
             );
 
             return {
@@ -726,12 +741,10 @@ export default class FormsService extends moleculer.Service {
               url: uploadedPhoto?.url,
             };
           } catch (e) {
-            return throwValidationError(
-              `${errorPrefix} Photo ${index}. ${e?.type}`
-            );
+            return throwValidationError(`${errorPrefix} Photo ${index}. ${e?.type}`);
           }
-        }
-      )
+        },
+      ),
     );
 
     return uploadedPhotos;
@@ -742,7 +755,7 @@ export default class FormsService extends moleculer.Service {
     data: string[],
     service: string,
     errName?: string,
-    errorPrefix?: string
+    errorPrefix?: string,
   ) {
     if (isEmpty(data)) return [];
 
@@ -751,9 +764,7 @@ export default class FormsService extends moleculer.Service {
     });
 
     if (dbData.length !== data.length) {
-      throwValidationError(
-        `${errorPrefix} Some ${errName || service} do not exist`
-      );
+      throwValidationError(`${errorPrefix} Some ${errName || service} do not exist`);
     }
 
     return dbData.map((item) => item.id);
@@ -763,7 +774,7 @@ export default class FormsService extends moleculer.Service {
     ctx: moleculer.Context<any, {}, moleculer.GenericObject>,
     data: ApiForm,
     tenant: Tenant,
-    errorPrefix = ""
+    errorPrefix = '',
   ) {
     const {
       categories,
@@ -778,71 +789,64 @@ export default class FormsService extends moleculer.Service {
 
     const newForm: any = { ...rest };
 
-    const coordinatesErr = "Invalid coordinates";
+    const coordinatesErr = 'Invalid coordinates';
 
     if (coordinatesWGS) {
-      if (!this.validateCoordinates(coordinatesWGS))
-        throwBadRequestError(coordinatesErr);
+      if (!this.validateCoordinates(coordinatesWGS)) throwBadRequestError(coordinatesErr);
 
-      const transform = transformation("EPSG:4326", "3346");
-      const transformed = transform.forward(coordinatesWGS);
+      const transform = transformation('EPSG:4326', '3346');
+      const transformed = transform.forward(coordinatesWGS.reverse());
       newForm.geom = this.createPointFeatureCollection(transformed);
     }
 
     if (coordinatesLKS) {
-      if (!this.validateCoordinates(coordinatesLKS))
-        throwBadRequestError(coordinatesErr);
+      if (!this.validateCoordinates(coordinatesLKS)) throwBadRequestError(coordinatesErr);
 
       newForm.geom = this.createPointFeatureCollection(coordinatesLKS);
     }
 
-    if (categories) {
-      newForm.categories = await this.validateExternalMulti(
-        ctx,
-        categories,
-        "categories",
-        "",
-        errorPrefix
-      );
-    }
+    const validateStringsArray = async (
+      ctx: moleculer.Context<any, {}, moleculer.GenericObject>,
+      array: any[],
+      fieldName: string,
+      subFieldName = '',
+      errorPrefix: string,
+    ) => {
+      if (!array?.every((i) => typeof i === 'string')) return array || [];
 
-    if (subCategories) {
-      newForm.subCategories = await this.validateExternalMulti(
-        ctx,
-        subCategories,
-        "categories",
-        "subcategories",
-        errorPrefix
-      );
-    }
-    if (additionalInfos) {
-      newForm.additionalInfos = await this.validateExternalMulti(
-        ctx,
-        additionalInfos,
-        "additionalInfos",
-        "",
-        errorPrefix
-      );
-    }
+      return await this.validateExternalMulti(ctx, array, fieldName, subFieldName, errorPrefix);
+    };
 
-    if (visitInfo) {
+    newForm.categories = await validateStringsArray(ctx, categories, 'categories', '', errorPrefix);
+
+    newForm.subCategories = await validateStringsArray(
+      ctx,
+      subCategories,
+      'categories',
+      'subcategories',
+      errorPrefix,
+    );
+
+    newForm.additionalInfos = await validateStringsArray(
+      ctx,
+      additionalInfos,
+      'additionalInfos',
+      '',
+      errorPrefix,
+    );
+
+    if (typeof visitInfo === 'string') {
       const dbVisitInfo: VisitInfo = await ctx.call(`visitInfos.findOne`, {
         query: { name: visitInfo },
       });
 
-      if (!dbVisitInfo)
-        throwValidationError(`${errorPrefix} Visit info does not exists`);
+      if (!dbVisitInfo) throwValidationError(`${errorPrefix} Visit info does not exists`);
 
       newForm.visitInfo = dbVisitInfo.id;
     }
 
     if (photos) {
-      const uploadedPhotos = await this.validateExternalPhotos(
-        photos,
-        tenant,
-        ctx,
-        errorPrefix
-      );
+      const uploadedPhotos = await this.validateExternalPhotos(photos, tenant, ctx, errorPrefix);
       newForm.photos = uploadedPhotos;
     }
 
@@ -855,7 +859,7 @@ export default class FormsService extends moleculer.Service {
 
     return (
       entity?.status === FormStatus.APPROVED ||
-      `Cannot change isActive with status ${entity?.status || "unknown"}`
+      `Cannot change isActive with status ${entity?.status || 'unknown'}`
     );
   }
 
@@ -866,11 +870,7 @@ export default class FormsService extends moleculer.Service {
 
     const isAdmin = user.type === UserType.ADMIN;
 
-    const adminStatuses = [
-      FormStatus.REJECTED,
-      FormStatus.RETURNED,
-      FormStatus.APPROVED,
-    ];
+    const adminStatuses = [FormStatus.REJECTED, FormStatus.RETURNED, FormStatus.APPROVED];
 
     const newStatuses = [FormStatus.CREATED, FormStatus.APPROVED];
 
@@ -882,9 +882,7 @@ export default class FormsService extends moleculer.Service {
     const editingPermissions = this.hasPermissionToEdit(entity, user, profile);
 
     if (editingPermissions.edit) {
-      return isAdmin
-        ? value === FormStatus.APPROVED
-        : value === FormStatus.SUBMITTED || error;
+      return isAdmin ? value === FormStatus.APPROVED : value === FormStatus.SUBMITTED || error;
     } else if (editingPermissions.validate) {
       return adminStatuses.includes(value) || error;
     }
@@ -896,7 +894,7 @@ export default class FormsService extends moleculer.Service {
   hasPermissionToEdit(
     form: any,
     user?: User,
-    profile?: Tenant
+    profile?: Tenant,
   ): {
     edit: boolean;
     validate: boolean;
@@ -908,11 +906,7 @@ export default class FormsService extends moleculer.Service {
     // form uploaded via api
     const isApiUpload = !user?.id;
 
-    if (
-      !form?.id ||
-      (!isApiUpload && !form?.createdBy) ||
-      [FormStatus.REJECTED].includes(form?.status)
-    ) {
+    if (!form?.id || [FormStatus.REJECTED].includes(form?.status)) {
       return invalid;
     }
 
@@ -935,9 +929,7 @@ export default class FormsService extends moleculer.Service {
     } else if (isAdmin) {
       return {
         edit: [FormStatus.APPROVED].includes(form.status),
-        validate: [FormStatus.CREATED, FormStatus.SUBMITTED].includes(
-          form?.status
-        ),
+        validate: [FormStatus.CREATED, FormStatus.SUBMITTED].includes(form?.status),
       };
     }
 
@@ -945,11 +937,17 @@ export default class FormsService extends moleculer.Service {
   }
 
   @Method
+  async refreshObjects(ctx: Context) {
+    await this.refreshMaterializedView(ctx, MaterializedView.OBJECTS);
+    await this.broker.emit('cache.clean.tiles.objects');
+  }
+
+  @Method
   async validateStatusChange(
     ctx: Context<
-      { id: number },
+      { id: number; isActive?: boolean },
       UserAuthMeta & RequestAutoApprove & FormStatusChanged
-    >
+    >,
   ) {
     const { id } = ctx.params;
 
@@ -958,19 +956,15 @@ export default class FormsService extends moleculer.Service {
       ctx.meta.statusChanged = true;
     } else if (user?.type === UserType.ADMIN) {
       ctx.meta.autoApprove = true;
+      ctx.params.isActive = true;
     }
 
     return ctx;
   }
 
   @Method
-  createFormHistory(
-    ctx: Context,
-    id: number,
-    type: string,
-    comment: string = ""
-  ) {
-    return ctx.call("forms.histories.create", {
+  createFormHistory(ctx: Context, id: number, type: string, comment: string = '') {
+    return ctx.call('forms.histories.create', {
       form: id,
       comment,
       type,
@@ -979,8 +973,8 @@ export default class FormsService extends moleculer.Service {
 
   @Method
   getFolderName(user?: User, tenant?: Tenant) {
-    const tenantPath = tenant?.id || "private";
-    const userPath = user?.id || "user";
+    const tenantPath = tenant?.id || 'private';
+    const userPath = user?.id || 'user';
 
     return `uploads/forms/${tenantPath}/${userPath}`;
   }
@@ -997,7 +991,7 @@ export default class FormsService extends moleculer.Service {
   @Method
   createPointFeatureCollection(coordinates: number[]) {
     return parse({
-      type: "Point",
+      type: 'Point',
       coordinates,
     });
   }
@@ -1005,14 +999,11 @@ export default class FormsService extends moleculer.Service {
   @Method
   async sendNotificationOnStatusChange(form: Form) {
     // TODO: send email for admins.
-    if (
-      !emailCanBeSent() ||
-      [FormStatus.CREATED, FormStatus.SUBMITTED].includes(form?.status)
-    ) {
+    if (!emailCanBeSent() || [FormStatus.CREATED, FormStatus.SUBMITTED].includes(form?.status)) {
       return;
     }
 
-    const user: User = await this.broker.call("users.resolve", {
+    const user: User = await this.broker.call('users.resolve', {
       id: form.createdBy,
       scope: USERS_DEFAULT_SCOPES,
     });
@@ -1029,7 +1020,7 @@ export default class FormsService extends moleculer.Service {
   }
 
   @Event()
-  async "forms.updated"(ctx: Context<EntityChangedParams<Form>>) {
+  async 'forms.updated'(ctx: Context<EntityChangedParams<Form>>) {
     const { oldData: prevForm, data: form } = ctx.params;
 
     if (prevForm?.status !== form?.status) {
@@ -1041,36 +1032,42 @@ export default class FormsService extends moleculer.Service {
         [FormStatus.APPROVED]: FormHistoryTypes.UPDATED,
       };
 
-      await ctx.call("forms.histories.create", {
-        form: form.id,
-        comment,
-        type: typesByStatus[form?.status],
-      });
+      if (form?.status === FormStatus.APPROVED) {
+        await this.refreshObjects(ctx);
+      }
+
+      await this.createFormHistory(ctx, form.id, typesByStatus[form?.status], comment);
     }
   }
 
   @Event()
-  async "forms.created"(
-    ctx: Context<EntityChangedParams<Form[]>, RequestAutoApprove>
-  ) {
+  async 'forms.created'(ctx: Context<EntityChangedParams<Form[]>, RequestAutoApprove>) {
     const { data } = ctx.params;
 
     const forms = Array.isArray(data) ? data : [data];
     const autoApprove = ctx?.meta?.autoApprove;
 
-    Promise.all(
+    await Promise.all(
       forms.map(async (form) => {
-        await ctx.call("forms.histories.create", {
-          form: form.id,
-          type: autoApprove
-            ? FormHistoryTypes.APPROVED
-            : FormHistoryTypes.CREATED,
-        });
+        await this.createFormHistory(
+          ctx,
+          form.id,
+          autoApprove ? FormHistoryTypes.APPROVED : FormHistoryTypes.CREATED,
+        );
 
         if (!autoApprove) {
           await this.sendNotificationOnStatusChange(form);
         }
-      })
+      }),
     );
+
+    if (autoApprove) {
+      await this.refreshObjects(ctx);
+    }
+  }
+
+  @Event()
+  async 'forms.removed'(ctx: Context<EntityChangedParams<Form>>) {
+    await this.refreshObjects(ctx);
   }
 }

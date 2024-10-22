@@ -1,0 +1,16 @@
+[
+  {
+    "nameLT": "form1",
+    "categories": [
+      { "id": 1, "name": "kat1", "nameEn": "cat1" },
+      { "id": 2, "name": "kat2", "nameEn": "cat2" }
+    ]
+  },
+  {
+    "nameLT": "form2",
+    "categories": [
+      { "id": 3, "name": "kat3", "nameEn": "cat3" },
+      { "id": 4, "name": "kat4", "nameEn": "cat4" }
+    ]
+  }
+]

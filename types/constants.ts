@@ -3,6 +3,8 @@ import Moleculer, { Context, Errors } from "moleculer";
 import { UserAuthMeta } from "../services/api.service";
 import { FieldHookCallback } from "./";
 
+export const LKS_SRID = 3346;
+
 export enum EndpointType {
   ADMIN = "ADMIN",
   PUBLIC = "PUBLIC",
