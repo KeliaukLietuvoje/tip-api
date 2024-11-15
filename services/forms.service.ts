@@ -170,7 +170,7 @@ async function validateSubCategories({ params, value, ctx, entity }: FieldHookCa
 
 const getCategoryChildIds = (categories: Category[]) => {
   return categories.reduce((children, curr): any => {
-    if (Array.isArray(curr.children) && curr?.children?.length) {
+    if (curr?.children?.length) {
       return { ...children, ...getCategoryChildIds(curr.children) };
     }
 
