@@ -136,7 +136,10 @@ async function validateCategories({ value, ctx, params, entity }: FieldHookCallb
   const hasSubcategories = subcategories && subcategories?.length;
 
   const dbCategories: Category[] = await ctx.call('categories.find', {
-    query: { ...(hasSubcategories && { parent: { $exists: false } }), id: { $in: value } },
+    query: {
+      ...(hasSubcategories && { parent: { $exists: false } }),
+      id: { $in: value },
+    },
   });
 
   const isValid = dbCategories.length === value.length;
@@ -167,7 +170,7 @@ async function validateSubCategories({ params, value, ctx, entity }: FieldHookCa
 
 const getCategoryChildIds = (categories: Category[]) => {
   return categories.reduce((children, curr): any => {
-    if (Array.isArray(curr.children)) {
+    if (Array.isArray(curr.children) && curr?.children?.length) {
       return { ...children, ...getCategoryChildIds(curr.children) };
     }
 
