@@ -468,7 +468,7 @@ export default class FormsService extends moleculer.Service {
   async deleteEntities(ctx: Context<{ ids: number[] }>) {
     const { ids } = ctx.params;
 
-    return ctx.call('forms.removeEntities', {
+    return ctx.call('forms.removeMany', {
       id: ids,
     });
   }
