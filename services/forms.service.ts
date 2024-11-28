@@ -469,7 +469,7 @@ export default class FormsService extends moleculer.Service {
     const { ids } = ctx.params;
 
     return ctx.call('forms.removeMany', {
-      id: ids,
+      query: { id: { $in: ids } },
     });
   }
 
