@@ -455,6 +455,23 @@ export default class FormsService extends moleculer.Service {
       id: ctx.params.id,
     });
   }
+  @Action({
+    rest: 'DELETE /',
+    params: {
+      ids: {
+        type: 'array',
+        items: { type: 'number' },
+        convert: true,
+      },
+    },
+  })
+  async deleteEntities(ctx: Context<{ ids: number[] }>) {
+    const { ids } = ctx.params;
+
+    return ctx.call('forms.removeAllEntities', {
+      id: ids,
+    });
+  }
 
   @Action({
     rest: 'GET /:id/history',
