@@ -473,7 +473,7 @@ export default class FormsService extends moleculer.Service {
     });
 
     return ctx.call('forms.removeMany', {
-      query: { id: { $in: forms.map((form) => form.id) } },
+      query: { id: { $in: ids } },
     });
   }
 
