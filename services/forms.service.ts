@@ -470,6 +470,7 @@ export default class FormsService extends moleculer.Service {
 
     return ctx.call('forms.removeMany', {
       query: { id: { $in: ids } },
+      scope: AUTH_PROTECTED_SCOPES,
     });
   }
 
