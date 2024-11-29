@@ -468,9 +468,12 @@ export default class FormsService extends moleculer.Service {
   async deleteForms(ctx: Context<{ ids: number[] }>) {
     const { ids } = ctx.params;
 
+    const forms: Form[] = await ctx.call('forms.resolve', {
+      id: ids,
+    });
+
     return ctx.call('forms.removeMany', {
-      query: { id: { $in: ids } },
-      scope: AUTH_PROTECTED_SCOPES,
+      query: { id: { $in: forms.map((form) => form.id) } },
     });
   }
 
