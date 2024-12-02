@@ -460,8 +460,7 @@ export default class FormsService extends moleculer.Service {
     params: {
       ids: {
         type: 'array',
-        items: { type: 'number' },
-        convert: true,
+        items: 'number|convert',
       },
     },
   })
