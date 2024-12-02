@@ -455,6 +455,24 @@ export default class FormsService extends moleculer.Service {
       id: ctx.params.id,
     });
   }
+  @Action({
+    rest: 'DELETE /',
+    params: {
+      ids: {
+        type: 'array',
+        items: 'number|convert',
+      },
+    },
+  })
+  async deleteForms(ctx: Context<{ ids: number[] }>) {
+    const { ids } = ctx.params;
+
+    return ctx.call('forms.removeMany', {
+      query: {
+        id: { $in: ids },
+      },
+    });
+  }
 
   @Action({
     rest: 'GET /:id/history',
